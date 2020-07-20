@@ -83,9 +83,6 @@ class TeamSelector implements INTERFACES.Interaction {
     this.prepareCam(true)
     this.refreshPeds(true)
     this.bindKeys()
-
-    /** @todo delete this later */
-    if (this.player.name !== 'ragecacao') this.submit()
   }
 
   /**
