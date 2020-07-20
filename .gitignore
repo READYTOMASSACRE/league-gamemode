@@ -1,0 +1,25 @@
+
+*dist
+*build
+*node_modules
+*yarn-error.log
+*npm-debug.log*
+*yarn-debug.log*
+*yarn-error.log*
+
+!/**/.gitkeep
+
+.DS_Store
+
+# server-side
+serverside/assets/savepositions.json
+
+# cef
+cef/.pnp
+cef/.env.local
+cef/.env.development.local
+cef/.env.test.local
+cef/.env.production.local
+.pnp.js
+# cef testing
+/cef/coverage

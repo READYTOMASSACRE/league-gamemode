@@ -1,0 +1,54 @@
+{
+  "DEBUG": true,
+  "LANGUAGE": "en",
+  "LOBBY": [-1026.7474365234375, -364.5588073730469, 36.930908203125],
+  "DB_PATH": "./packages/league/assets/pouchdb",
+  "ROUND_TIME_INTERVAL_MINUTES": 5,
+  "WEAPONS": {
+    "MELEE": ["weapon_dagger", "weapon_bat", "weapon_bottle", "weapon_crowbar", "weapon_flashlight", "weapon_golfclub", "weapon_nightstick", "weapon_knuckle"],
+    "HANDGUNS": ["weapon_pistol", "weapon_combatpistol", "weapon_pistol50", "weapon_heavypistol", "weapon_revolver_mk2"],
+    "SUBMACHINE": ["weapon_smg"],
+    "SHOTGUNS": ["weapon_pumpshotgun", "weapon_musket"],
+    "RIFLES": ["weapon_assaultrifle", "weapon_carbinerifle", "weapon_bullpuprifle", "weapon_compactrifle"],
+    "LIGHT_RIFLES": ["weapon_gusenberg"],
+    "SNIPER_RIFLES": ["weapon_sniperrifle"]
+  },
+  "WEAPONS_SET": [
+    ["MELEE"],
+    ["HANDGUNS", "SUBMACHINE", "SHOTGUNS", "RIFLES", "LIGHT_RIFLES", "SNIPER_RIFLES"],
+    ["HANDGUNS", "SUBMACHINE", "SHOTGUNS", "RIFLES", "LIGHT_RIFLES", "SNIPER_RIFLES"]
+  ],
+  "TEAMS": {
+    "ATTACKERS": {
+      "NAME": "Scourge",
+      "SKINS": ["u_m_m_jesus_01", "s_m_m_movspace_01"],
+      "COLOR": "#f64041"
+    },
+    "DEFENDERS": {
+      "NAME": "Sentinel",
+      "SKINS": ["u_m_y_imporage", "s_m_y_mime"],
+      "COLOR": "#85abce"
+    },
+    "SPECTATORS": {
+      "NAME": "Spectators",
+      "SKINS": ["cs_priest", "csb_vagspeak"]
+    }
+  },
+  "TEAM_SELECTOR": {
+    "CAM": {
+      "VECTOR": [502.24664306640625, 5611.33544921875, 799.14],
+      "ROTATION": [0, 0, 0],
+      "FOV": 40,
+      "DIMENSION": 0,
+      "POINT_AT": [501.0116271972656, 5593.58935546875, 795.4794921875]
+    },
+    "PED": {
+      "VECTOR": [501.6931457519531, 5603.701171875, 797.9105224609375],
+      "HEADING": 0
+    }
+  },
+  "VOTE": {
+    "MAX_NOMINATE": 5,
+    "TIME": 10
+  }
+}

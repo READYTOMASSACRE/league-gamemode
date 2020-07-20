@@ -1,0 +1,32 @@
+{
+  "name": "league",
+  "version": "0.1.0",
+  "description": "League tdm gamemode for clan matches",
+  "keywords": [
+    "league",
+    "rage-mp",
+    "rage",
+    "gta",
+    "v",
+    "clanwarscript"
+  ],
+  "scripts": {
+    "postinstall": "yarn postinstall:clientside && yarn postinstall:serverside && yarn postinstall:cef",
+    "postinstall:clientside": "yarn --cwd clientside/",
+    "postinstall:cef": "yarn --cwd cef/",
+    "postinstall:serverside": "yarn --cwd serverside/",
+    "build": "yarn build:clientside && yarn build:serverside && yarn build:cef && yarn build:make",
+    "build:clientside": "yarn --cwd clientside build",
+    "build:cef": "yarn --cwd cef build",
+    "build:serverside": "yarn --cwd serverside build",
+    "build:make": "node build.js make"
+  },
+  "author": "READYTOMASSACRE",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^6.0.0",
+    "inquirer": "^7.3.2",
+    "ncp": "^2.0.0",
+    "rimraf": "^3.0.2"
+  }
+}

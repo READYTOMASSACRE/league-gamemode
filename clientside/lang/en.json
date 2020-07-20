@@ -1,0 +1,55 @@
+{
+  "CMD_DESC_SAVE_POS"                 : "Usage {{cmdName}} [pointname]",
+  "CMD_DESC_VOTE"                     : "Usage {{cmdName}} [id|code] - Nominate the map to start",
+  "CMD_DESC_CHANGE_LANG"              : "Usage /{{cmdName}} [lang] - Change the interface language",
+
+  "PAGE_SHOW_CMD"                     : "Page: %s, showing commands [%s..%s] of %s",
+
+  "ERR_WRONG_PLAYER_ID"               : "Wrong player id",
+  "ERR_WRONG_PLAYER_DATA"             : "Wrong player data",
+  "ERR_WRONG_SET_PLAYER_DATA"         : "%s:%s::Invalid data",
+
+  "ERR_INVALID_KEY"                   : "Invalid key %s",
+  "ERR_INVALID_VALIDATOR"             : "Invalid validator",
+  "ERR_INVALID_OPERATION"             : "Invalid operation",
+  "ERR_INVALID_ROUND_STATE_UPDATE"    : "Invalid data or player is not in round",
+  "ERR_INVALID_ROUND_STAT"            : "Invalid roundstat",
+  "ERR_INVALID_PLAYER_STATE"          : "Invalid player state",
+  "ERR_INVALID_PLAYING_TIME"          : "%s::Invalid playing time",
+
+  "ERR_NOT_FOUND"                     : "Not found",
+  "ERR_MAP_NOT_FOUND"                 : "Map with id/code %s hasn't found, it works",
+  "ERR_LANG_NOT_FOUND"                : "Language %s not found",
+  "ERR_WEAPON_NOT_FOUND"              : "Weapons aren't avaliable",
+  "ERR_WRONG_TYPE"                    : "Wrong type %s",
+  "ERR_TOO_MANY_MAPS"                 : "Too many maps: %s",
+
+  "ERR_PLAYER_HAS_ALREADY_VOTED"      : "Player has already voted",
+
+  "ERR_VOTEMAP_MAX_NOMINATED"         : "Maximum maps are nominated",
+  "ERR_VOTEMAP_HAS_NOT_ADDED"         : "Map has not added",
+
+  "ERR_ROUND_IS_NOT_RUNNING"          : "Round is not running",
+  "ERR_ROUND_IS_RUNNING"              : "Round is running",
+
+  "TEAM_SELECTOR_CHANGE"              : "You will change your team after your next death",
+  "TEAM_SELECTOR_CHANGE_CANCEL"       : "You canceled a team change",
+
+  "KILL"                              : "Kill",
+  "DEATH"                             : "Death",
+  "ASSIST"                            : "Assist",
+  "LVL"                               : "Lvl",
+  "DAMAGE"                            : "Damage",
+  "DAMAGE_RECEIVED"                   : "Damage received",
+  "PING"                              : "Ping",
+
+  "IDLE"                              : "Idle",
+  "SELECT"                            : "Select",
+  "ALIVE"                             : "Alive",
+  "DEAD"                              : "Dead",
+
+  "SCOREBOARD_PLAYERS"                : "Players",
+  "TIME_REMAINING"                    : "Time remaining %s",
+  "VOTEMAP_NOTIFY"                    : "Votemap notify remaning %s",
+  "WEAPON_CHOOSE_TEXT"                : "Choice a weapon, %s"
+}
