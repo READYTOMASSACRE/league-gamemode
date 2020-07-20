@@ -1,5 +1,5 @@
 {
-  "DEBUG": true,
+  "DEBUG": false,
   "LANGUAGE": "en",
   "LOBBY": [-1026.7474365234375, -364.5588073730469, 36.930908203125],
   "DB_PATH": "./packages/league/assets/pouchdb",

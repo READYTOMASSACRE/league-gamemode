@@ -1,7 +1,7 @@
 {
-  "CMD_DESC_SAVE_POS"                 : "Usage /{{cmdName}} [pointname]",
-  "CMD_DESC_VOTE"                     : "Usage /{{cmdName}} [id|code] - Nominate the map to start",
-  "CMD_DESC_CHANGE_LANG"              : "Используйте /{{cmdName}} [язык] - Сменить язык интерфейса",
+  "CMD_DESC_SAVE_POS"                 : "Usage {{cmdName}} [pointname]",
+  "CMD_DESC_VOTE"                     : "Usage {{cmdName}} [id|code] - Nominate the map to start",
+  "CMD_DESC_CHANGE_LANG"              : "Usage /{{cmdName}} [lang] - Change the interface language",
 
   "PAGE_SHOW_CMD"                     : "Page: %s, showing commands [%s..%s] of %s",
 
@@ -18,9 +18,10 @@
   "ERR_INVALID_PLAYING_TIME"          : "%s::Invalid playing time",
 
   "ERR_NOT_FOUND"                     : "Not found",
-  "ERR_MAP_NOT_FOUND"                 : "Карта с ид/кодом %s не была найдена",
+  "ERR_MAP_NOT_FOUND"                 : "Map with id/code %s hasn't found, it works",
+  "ERR_LANG_NOT_FOUND"                : "Language %s not found",
   "ERR_WEAPON_NOT_FOUND"              : "Weapons aren't avaliable",
-
+  "ERR_WRONG_TYPE"                    : "Wrong type %s",
   "ERR_TOO_MANY_MAPS"                 : "Too many maps: %s",
 
   "ERR_PLAYER_HAS_ALREADY_VOTED"      : "Player has already voted",
@@ -29,5 +30,26 @@
   "ERR_VOTEMAP_HAS_NOT_ADDED"         : "Map has not added",
 
   "ERR_ROUND_IS_NOT_RUNNING"          : "Round is not running",
-  "ERR_ROUND_IS_RUNNING"              : "Round is running"
+  "ERR_ROUND_IS_RUNNING"              : "Round is running",
+
+  "TEAM_SELECTOR_CHANGE"              : "You will change your team after your next death",
+  "TEAM_SELECTOR_CHANGE_CANCEL"       : "You canceled a team change",
+
+  "KILL"                              : "Kill",
+  "DEATH"                             : "Death",
+  "ASSIST"                            : "Assist",
+  "LVL"                               : "Lvl",
+  "DAMAGE"                            : "Damage",
+  "DAMAGE_RECEIVED"                   : "Damage received",
+  "PING"                              : "Ping",
+
+  "IDLE"                              : "Idle",
+  "SELECT"                            : "Select",
+  "ALIVE"                             : "Alive",
+  "DEAD"                              : "Dead",
+
+  "SCOREBOARD_PLAYERS"                : "Players",
+  "TIME_REMAINING"                    : "Time remaining %s",
+  "VOTEMAP_NOTIFY"                    : "Votemap notify remaning %s",
+  "WEAPON_CHOOSE_TEXT"                : "Choice a weapon, %s"
 }
