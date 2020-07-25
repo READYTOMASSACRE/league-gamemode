@@ -7,7 +7,7 @@ const program                   = require('commander')
 
 const startTime           = Date.now()
 const buildPath           = resolve('./', 'build')
-const serversideFolders   = ['dist', 'node_modules', 'assets']
+const serversideFolders   = ['dist', 'node_modules', 'assets', 'lang']
 const serversidePath      = resolve('./', 'serverside')
 const clientsidePath      = resolve('./', 'clientside', 'dist')
 const cefPath             = resolve('./', 'cef', 'build')

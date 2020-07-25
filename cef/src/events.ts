@@ -11,9 +11,11 @@ export enum RPC_DIALOG {
   CLIENT_DIALOG_CLOSE         = 'CEF.dialog.close',
   CLIENT_WEAPON_DIALOG_OPEN   = 'CEF.weaponDialog.open',
   CLIENT_WEAPON_DIALOG_CLOSE  = 'CEF.weaponDialog.close',
-  CLIENT_SCOREBOARD_OPEN      = 'CEF.scoreboard.open',
-  CLIENT_SCOREBOARD_CLOSE     = 'CEF.scoreboard.close',
+  CLIENT_SCOREBOARD_TOGGLE    = 'CEF.scoreboard.toggle',
   CLIENT_SCOREBOARD_DATA      = 'CEF.scoreboard.data',
+  CLIENT_INFOPANEL_TOGGLE     = 'CEF.infopanel.toggle',
+  CLIENT_INFOPANEL_DATA       = 'CEF.infopanel.data',
+  CLIENT_NOTIFY_NOTISTACK     = 'CEF.notify.notistack',
 }
 
 export const registerGlobalEvents = () => {

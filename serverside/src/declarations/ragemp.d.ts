@@ -4,6 +4,7 @@
 interface EntityMp {
   sharedData: SHARED.TYPES.SharedData
   playingTime?: number
+  muted: number
 }
 
 /**

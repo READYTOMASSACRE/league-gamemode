@@ -1,6 +1,5 @@
 import { Dummy } from "../../entities/Dummy"
 import { singleton, injectable } from "tsyringe"
-import { Language } from "../../core/Language"
 
 /**
  * A manager to handle dummies
@@ -11,7 +10,7 @@ class DummyConfigManager {
   private readonly type = SHARED.ENTITIES.CONFIG
   private _dummy?: Dummy<SHARED.ENTITIES.CONFIG>
 
-  constructor(readonly lang: Language) {
+  constructor() {
     this.registerDummies = this.registerDummies.bind(this)
   }
 
@@ -60,10 +59,26 @@ class DummyConfigManager {
   }
 
   /**
+   * Get a nametag config
+   */
+  getNameTagConfig(): SHARED.TYPES.NametagConfig
+  {
+    return this.dummy.data.HUD.NAMETAG
+  }
+
+  /**
+   * Get a global hud config
+   */
+  getGlobalHudConfig(): SHARED.TYPES.GlobalHudConfig
+  {
+    return this.dummy.data.HUD.GLOBAL
+  }
+
+  /**
    * Get config dummy
    */
   get dummy() {
-    if (!this._dummy) throw new ReferenceError(this.lang.get(SHARED.MSG.ERR_NOT_FOUND))
+    if (!this._dummy) throw new ReferenceError(SHARED.MSG.ERR_NOT_FOUND)
 
     return this._dummy
   }

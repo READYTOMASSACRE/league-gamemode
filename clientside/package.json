@@ -17,6 +17,7 @@
         "build": "npx webpack --config webpack.prod.js"
     },
     "dependencies": {
+        "deepmerge": "^4.2.2",
         "rage-decorators": "^1.1.3",
         "rage-rpc": "^0.4.0",
         "reflect-metadata": "^0.1.13",

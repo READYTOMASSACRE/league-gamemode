@@ -1,4 +1,4 @@
-import { singleton, autoInjectable, inject } from "tsyringe"
+import { singleton, autoInjectable } from "tsyringe"
 import { event, eventable } from "rage-decorators"
 import { RoundStat, RoundKeyValueCollection } from "../db/domains/RoundStat"
 import { RoundStatRepo } from "../db/repos/RoundStatRepo"
@@ -6,7 +6,7 @@ import { DummyPlayerRoundStatManager } from "./dummies/DummyPlayerRoundStatManag
 import { logMethod } from "../utils"
 import { DEBUG } from "../bootstrap"
 import { PlayerManager } from "./PlayerManager"
-import { PlayerStatManager } from "./PlayerStatManager"
+import { PlayerProfileManager } from "./PlayerProfileManager"
 import { RoundStatUpdateError } from "../errors/PlayerErrors"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { DummyRoundStatManager } from "./dummies/DummyRoundStatManager"
@@ -27,7 +27,7 @@ class RoundStatManager {
     readonly repo: RoundStatRepo,
     readonly dummyStatManager: DummyPlayerRoundStatManager,
     readonly playerManager: PlayerManager,
-    readonly playerStatManager: PlayerStatManager,
+    readonly playerStatManager: PlayerProfileManager,
     readonly errHandler: ErrorHandler,
     readonly dummyRoundStatManager: DummyRoundStatManager,
   ) {

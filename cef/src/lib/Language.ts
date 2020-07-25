@@ -24,7 +24,6 @@ export class Language {
       const [ messages ] = data
       this.messages = new Map()
   
-      console.log("Change language", messages)
       Object
         .entries(messages)
         .forEach(([id, msg]) => this.messages.set(id, msg as string))

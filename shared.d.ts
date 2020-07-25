@@ -19,10 +19,14 @@ declare namespace SHARED {
     SERVER_PLAYER_LOGIN_SUCCESS = 'player.login.success',
     /** This event is invoked by serverside when the player should logIn */
     SERVER_PLAYER_LOGIN_FAILURE = 'player.login.failure',
+    /** This event is invoked by serverside to notify player */
+    SERVER_NOTIFY               = 'player.notify',
     /** This event is invoked by serverside to notify player errors */
     SERVER_NOTIFY_ERROR         = 'player.notify.error',
     /** This event is invoked by serverside to notify player that vote has started */
     SERVER_VOTEMAP_START        = 'votemap.start',
+    /** This event is invoked by serverside to update state of nominated maps */
+    SERVER_VOTEMAP_UPDATE       = 'votemap.update',
     
     /**
      * ================ CLIENT-SIDE EVENTS ================
@@ -41,7 +45,6 @@ declare namespace SHARED {
     CLIENT_ASSIST_UPDATE        = 'roundstat.update.assist',
     /** This event is invoked by clientside when client browser is ready */
     CLIENT_BROWSER_READY        = 'browser.ready',
-    
     /**
     * ================= SHARED EVENTS =================
     */
@@ -63,8 +66,11 @@ declare namespace SHARED {
     CLIENT_SCOREBOARD_DATA            = 'CEF.scoreboard.data',
     /** This event is invoked by clientside to getting ping players */
     CLIENT_PING_REQUEST               = 'ping.request',
+    /** This event is invoked by clientside to set up new infopanel data */
+    CLIENT_INFOPANEL_DATA             = 'CEF.infopanel.data',
   }
 
+  /** @todo change CLIENT to CEF for cef call rpcs */
   const enum RPC_DIALOG {
     /** This event invokes when the dialog is opened */
     CLIENT_DIALOG_OPEN                = 'CEF.dialog.open',
@@ -74,10 +80,12 @@ declare namespace SHARED {
     CLIENT_WEAPON_DIALOG_OPEN         = 'CEF.weaponDialog.open',
     /** This event is invoked by clientside when the client should stop render a weapon dialog */
     CLIENT_WEAPON_DIALOG_CLOSE        = 'CEF.weaponDialog.close',
-    /** This event is invoked by clientside when the client should render a scoreboard dialog */
-    CLIENT_SCOREBOARD_OPEN            = 'CEF.scoreboard.open',
-    /** This event is invoked by clientside when the client should stop render a scoreboard dialog */
-    CLIENT_SCOREBOARD_CLOSE           = 'CEF.scoreboard.close',
+    /** This event is invoked by clientside when the client should or should stop render a scoreboard dialog */
+    CLIENT_SCOREBOARD_TOGGLE          = 'CEF.scoreboard.toggle',
+    /** This event is invoked by clientside when the client should or should stop render a top info panel */
+    CLIENT_INFOPANEL_TOGGLE           = 'CEF.infopanel.toggle',
+    /** This event is invoked by clientside to send a mesage into cef */
+    CLIENT_NOTIFY_NOTISTACK           = 'CEF.notify.notistack',
   }
 
   
@@ -119,7 +127,18 @@ declare namespace SHARED {
     CONFIG        = 0,
     MAP           = 1,
     PLAYER_STAT   = 2,
-    ROUND_STAT    = 3
+    ROUND_STAT    = 3,
+    LANGUAGE      = 4
+  }
+
+  /**
+   * User groups
+   */
+  const enum GROUP {
+    USER        = 0,
+    MODERATOR   = 1,
+    ADMIN       = 2,
+    ROOT        = 3,
   }
 
   namespace TYPES {
@@ -152,6 +171,41 @@ declare namespace SHARED {
       }
     }
 
+    type TextDrawParams = {
+      FONT                    : number
+      CENTRE                  : boolean
+      // @ts-ignore
+      SCALE                   : Array2d
+      OUTLINE                 : boolean
+      // @ts-ignore
+      COLOR?                  : RGBA
+    }
+
+    type NametagConfig = {
+      NICKNAME: TextDrawParams
+      HEALTH_BAR: {
+        WIDTH                   : number
+        HEIGHT                  : number
+        BORDER                  : number
+        GRADIENT: {
+          // @ts-ignore
+          FULL                  : RGB
+          // @ts-ignore
+          EMPTY                 : RGB
+        }
+      }
+      MAX_DISTANCE              : number
+    }
+
+    type GlobalHudConfig = {
+      TEXT: TextDrawParams
+    }
+
+    type HudConfig = {
+      GLOBAL                    : GlobalHudConfig
+      NAMETAG                   : NametagConfig
+    }
+
     type Config = {
       SERVER_NAME               : string
       LOBBY                     : [number, number, number]
@@ -161,9 +215,10 @@ declare namespace SHARED {
       LANGUAGE                  : string
       ROUND_TIME_INTERVAL       : number
       VOTE                      : {
-        MAX_NOMITE: number
-        TIME: number
+        MAX_NOMITE              : number
+        TIME                    : number
       }
+      HUD                       : HudConfig
     }
 
     type DummyTypes = {
@@ -171,12 +226,15 @@ declare namespace SHARED {
       [ENTITIES.MAP]            : GameMap
       [ENTITIES.PLAYER_STAT]    : PlayerRoundStatDTO
       [ENTITIES.ROUND_STAT]     : RoundStatDummyDTO
+      [ENTITIES.LANGUAGE]       : { [key: string]: any }
     }
 
     type SharedData = {
       state                     : SHARED.STATE
       teamId                    : SHARED.TEAMS
-      stat?                     : PlayerStatDTO
+      profile?                  : PlayerProfileDTO
+      lang                      : string
+      group                     : SHARED.GROUP
     }
 
     type PlayerRoundStatDTO = {
@@ -204,16 +262,18 @@ declare namespace SHARED {
 
     type RoundStatDummyDTO = {
       [key in Exclude<SHARED.TEAMS, SHARED.TEAMS.SPECTATORS>]: {
-        score: number
+        score                   : number
       }
     }
   
-    type PlayerStatDTO = {
+    type PlayerProfileDTO = {
       rgscId                    : string
       name                      : string
       registered                : number
       previousNames             : string[]
       timePlayed                : number
+      group                     : Exclude<GROUP, GROUP.ROOT>
+      password                  : string
       matches                   : number
       wins                      : number
       draws                     : number
@@ -249,6 +309,8 @@ declare namespace SHARED {
       normalize(dest?           : Vector2): Vector2
       toJSON()                  : [number, number]
     }
+
+    type NotifyVariantType = 'default' | 'error' | 'success' | 'warning' | 'info'
   }
 
   const enum MSG {
@@ -272,9 +334,11 @@ declare namespace SHARED {
   
     ERR_NOT_FOUND                     = "ERR_NOT_FOUND",
     ERR_MAP_NOT_FOUND                 = "ERR_MAP_NOT_FOUND",
+    ERR_PLAYER_NOT_FOUND              = 'ERR_PLAYER_NOT_FOUND',
     ERR_WEAPON_NOT_FOUND              = "ERR_WEAPON_NOT_FOUND",
     ERR_LANG_NOT_FOUND                = "ERR_LANG_NOT_FOUND",
     ERR_TOO_MANY_MAPS                 = "ERR_TOO_MANY_MAPS",
+    ERR_TOO_MANY_PLAYERS              = 'ERR_TOO_MANY_PLAYERS',
     ERR_WRONG_TYPE                    = "ERR_WRONG_TYPE",
   
     ERR_PLAYER_HAS_ALREADY_VOTED      = "ERR_PLAYER_HAS_ALREADY_VOTED",
@@ -286,6 +350,9 @@ declare namespace SHARED {
     ERR_ROUND_IS_RUNNING              = "ERR_ROUND_IS_RUNNING",
     TEAM_SELECTOR_CHANGE              = "TEAM_SELECTOR_CHANGE",
     TEAM_SELECTOR_CHANGE_CANCEL       = "TEAM_SELECTOR_CHANGE_CANCEL",
+    TEAM_SELECTOR_CHANGE_TEAM         = "TEAM_SELECTOR_CHANGE_TEAM",
+    TEAM_SELECTOR_CHANGE_SKIN         = "TEAM_SELECTOR_CHANGE_SKIN",
+    TEAM_SELECTOR_SUBMIT              = "TEAM_SELECTOR_SUBMIT",
 
     KILL                              = "KILL",
     DEATH                             = "DEATH",
@@ -304,5 +371,27 @@ declare namespace SHARED {
     TIME_REMAINING                    = "TIME_REMAINING",
     VOTEMAP_NOTIFY                    = "VOTEMAP_NOTIFY",
     WEAPON_CHOOSE_TEXT                = "WEAPON_CHOOSE_TEXT",
+    ROUND_START_MESSAGE               = "ROUND_START_MESSAGE",
+    ROUND_STOP_MESSAGE                = "ROUND_STOP_MESSAGE",
+
+    GROUP_LOGIN_SUCCESS               = "GROUP_LOGIN_SUCCESS",
+    GROUP_LOGIN_FAILURE               = "GROUP_LOGIN_FAILURE",
+    GROUP_LOGIN_INVALID               = "GROUP_LOGIN_INVALID",
+    GROUP_LOGGED_ALREADY              = "GROUP_LOGGED_ALREADY",
+    GROUP_ERR_WRONG_ACCESS            = "GROUP_ERR_WRONG_ACCESS",
+    GROUP_ERR_SIMILAR_GROUP           = "GROUP_ERR_SIMILAR_GROUP",
+    GROUP_ROOT                        = "GROUP_ROOT",
+    GROUP_ADMIN                       = "GROUP_ADMIN",
+    GROUP_MODERATOR                   = "GROUP_MODERATOR",
+    GROUP_USER                        = "GROUP_USER",
+    GROUP_ADD_SUCCESS                 = "GROUP_ADD_SUCCESS",
+    GROUP_ADD_SUCCESS_SELF            = "GROUP_ADD_SUCCESS_SELF",
+    GROUP_PASSWORD_CHANGED            = "GROUP_PASSWORD_CHANGED",
+
+    PLAYER_KICKED                     = "PLAYER_KICKED",
+    PLAYER_MUTED                      = "PLAYER_MUTED",
+    PLAYER_UNMUTED                    = "PLAYER_UNMUTED",
+    PLAYER_IS_MUTED                   = "PLAYER_IS_MUTED",
+    REASON_NULL                       = "REASON_NULL",
   }
 }

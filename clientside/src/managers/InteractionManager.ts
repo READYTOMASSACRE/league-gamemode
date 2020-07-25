@@ -5,23 +5,25 @@ import { TeamManager } from "./TeamManager"
 import { singleton, autoInjectable } from "tsyringe"
 import { DummyConfigManager } from "./dummies/DummyConfigManager"
 import { command, commandable, eventable, event } from "rage-decorators"
-import { Language } from "../core/Language"
 import { ErrorHandler } from "../core/ErrorHandler"
+import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
+import { HudManager } from "./HudManager"
 
 /**
  * Class to manage the player's interactions
  */
 @singleton()
-@autoInjectable()
 @commandable()
 @eventable()
+@autoInjectable()
 class InteractionManager implements INTERFACES.Manager {
   private teamSelector?: TeamSelector
   constructor(
     readonly playerManager: PlayerManager,
     readonly dummyConfigManager: DummyConfigManager,
     readonly teamManager: TeamManager,
-    readonly lang: Language,
+    readonly hudManager: HudManager,
+    readonly lang: DummyLanguageManager,
     readonly errHandler: ErrorHandler,
   ) {
     this.teamSelectorInteraction = this.teamSelectorInteraction.bind(this)
@@ -71,6 +73,7 @@ class InteractionManager implements INTERFACES.Manager {
           teams,
           playerManager   : this.playerManager,
           errHandler      : this.errHandler,
+          hudManager      : this.hudManager,
         })
 
         this.playerManager.setCustomData('isSelecting', true)

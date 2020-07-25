@@ -18,11 +18,13 @@
   "ERR_INVALID_PLAYING_TIME"          : "%s::Invalid playing time",
 
   "ERR_NOT_FOUND"                     : "Not found",
-  "ERR_MAP_NOT_FOUND"                 : "Map with id/code %s hasn't found, it works",
+  "ERR_MAP_NOT_FOUND"                 : "Map with id/code %s hasn't found",
+  "ERR_PLAYER_NOT_FOUND"              : "Player with id %s hasn't found",
   "ERR_LANG_NOT_FOUND"                : "Language %s not found",
   "ERR_WEAPON_NOT_FOUND"              : "Weapons aren't avaliable",
   "ERR_WRONG_TYPE"                    : "Wrong type %s",
   "ERR_TOO_MANY_MAPS"                 : "Too many maps: %s",
+  "ERR_TOO_MANY_PLAYERS"              : "Too many players: %s",
 
   "ERR_PLAYER_HAS_ALREADY_VOTED"      : "Player has already voted",
 
@@ -34,6 +36,9 @@
 
   "TEAM_SELECTOR_CHANGE"              : "You will change your team after your next death",
   "TEAM_SELECTOR_CHANGE_CANCEL"       : "You canceled a team change",
+  "TEAM_SELECTOR_CHANGE_TEAM"         : "Change team",
+  "TEAM_SELECTOR_CHANGE_SKIN"         : "Change skin",
+  "TEAM_SELECTOR_SUBMIT"              : "Submit",
 
   "KILL"                              : "Kill",
   "DEATH"                             : "Death",
@@ -49,7 +54,29 @@
   "DEAD"                              : "Dead",
 
   "SCOREBOARD_PLAYERS"                : "Players",
-  "TIME_REMAINING"                    : "Time remaining %s",
-  "VOTEMAP_NOTIFY"                    : "Votemap notify remaning %s",
-  "WEAPON_CHOOSE_TEXT"                : "Choice a weapon, %s"
+  "TIME_REMAINING"                    : "Time: %s",
+  "VOTEMAP_NOTIFY"                    : "Time left to vote: %s",
+  "WEAPON_CHOOSE_TEXT"                : "Choice a weapon, %s",
+  "ROUND_START_MESSAGE"               : "%s - Round has started",
+  "ROUND_STOP_MESSAGE"                : "Round has finished",
+
+  "GROUP_LOGIN_SUCCESS"               : "!{lightgreen}Successfuly logged as %s",
+  "GROUP_LOGIN_FAILURE"               : "!{brown}Invalid password to login as %s",
+  "GROUP_LOGGED_ALREADY"              : "You're already logged in as !{lightgreen}%s",
+  "GROUP_LOGIN_INVALID"               : "Invalid group to usage login command",
+  "GROUP_ERR_WRONG_ACCESS"            : "Invalid access to usage command",
+  "GROUP_ERR_SIMILAR_GROUP"           : "Can't downgrade the group if the player has the same group",
+  "GROUP_ROOT"                        : "Root",
+  "GROUP_ADMIN"                       : "Administrator",
+  "GROUP_MODERATOR"                   : "Moderator",
+  "GROUP_USER"                        : "User",
+  "GROUP_ADD_SUCCESS"                 : "Group !{lightgreen}%s !{white}has been changed successfuly for the player !{lightgreen}%s",
+  "GROUP_ADD_SUCCESS_SELF"            : "You has been added to the group !{lightgreen}%s!{white}, your password is: !{lightgreen}%s !{white}- Record it!",
+  "GROUP_PASSWORD_CHANGED"            : "!{lightgreen}Successfuly changed password",
+
+  "PLAYER_KICKED"                     : "!{brown}Player %s has been kicked by %s. Reason: %s",
+  "PLAYER_MUTED"                      : "!{brown}Player %s has been muted by %s. Reason: %s, time: %s minute(s)",
+  "PLAYER_UNMUTED"                    : "!{brown}Player %s has been unmuted by %s.",
+  "PLAYER_IS_MUTED"                   : "!{brown}You have been muted. Time left: %s",
+  "REASON_NULL"                       : "No reason"
 }

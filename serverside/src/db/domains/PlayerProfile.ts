@@ -1,17 +1,19 @@
 import { DomainConverter } from "./DomainConverter"
-import { PlayerStatRepo } from "../repos/PlayerStatRepo"
-import { PlayerStatUpdateError } from "../../errors/PlayerErrors"
+import { PlayerProfileRepo } from "../repos/PlayerProfileRepo"
+import { PlayerStatUpdateError, InvalidLoginGroup } from "../../errors/PlayerErrors"
+import { hash256 } from "../../utils"
 
 const MINUTE = 1000 * 60
 
+export type USER_GROUPS = Exclude<SHARED.GROUP, SHARED.GROUP.ROOT>
 /**
  * Player stats domain
  */
-class PlayerStat {
+class PlayerProfile {
   static readonly MMR_GAIN = 25
   static readonly EXP_GAIN = 50
 
-  constructor(public readonly state: SHARED.TYPES.PlayerStatDTO) {}
+  constructor(public readonly state: SHARED.TYPES.PlayerProfileDTO) {}
 
   get id(): string {
     return this.state.rgscId
@@ -52,19 +54,66 @@ class PlayerStat {
 
     if (data.win) {
       this.state.wins     += 1
-      this.state.exp      += PlayerStat.EXP_GAIN * 2
-      this.state.mmr      += PlayerStat.MMR_GAIN
+      this.state.exp      += PlayerProfile.EXP_GAIN * 2
+      this.state.mmr      += PlayerProfile.MMR_GAIN
     } else if(data.draw) {
       this.state.draws    += 1
-      this.state.exp      += PlayerStat.EXP_GAIN
+      this.state.exp      += PlayerProfile.EXP_GAIN
     } else {
       this.state.losses   += 1
-      this.state.exp      += PlayerStat.EXP_GAIN
-      this.state.mmr      -= PlayerStat.MMR_GAIN
+      this.state.exp      += PlayerProfile.EXP_GAIN
+      this.state.mmr      -= PlayerProfile.MMR_GAIN
       if (this.state.mmr < 0) this.state.mmr = 0
     }
 
     this.updateTimePlayed(data.id)
+  }
+
+  /**
+   * Set group
+   * @param {USER_GROUPS} group
+   */
+  setGroup(group: USER_GROUPS): boolean {
+    this.state.group = group
+
+    return true
+  }
+
+  /**
+   * Get profile group
+   */
+  getGroup(): USER_GROUPS {
+    return this.state.group
+  }
+
+  /**
+   * Set user password
+   * @param {string} password
+   */
+  setPassword(password: string): boolean {
+    this.state.password = hash256(password)
+
+    return true
+  }
+
+  /**
+   * Check if password is valid
+   * @param {string} password
+   */
+  isValidPassword(password: string): boolean {
+    return hash256(password) === this.state.password
+  }
+
+  /**
+   * Login into the adm/moderator groups
+   * @param {string} password 
+   */
+  login(password: string): boolean {
+    if (this.loginAvailableGroups.indexOf(this.state.group) === -1) {
+      throw new InvalidLoginGroup()
+    }
+
+    return this.isValidPassword(password)
   }
 
   /**
@@ -114,9 +163,9 @@ class PlayerStat {
 
   /**
    * Save the current player stat
-   * @param {PlayerStatRepo} repo - the repository of a player stat domain
+   * @param {PlayerProfileRepo} repo - the repository of a player stat domain
    */
-  async save(repo: PlayerStatRepo): Promise<boolean> {
+  async save(repo: PlayerProfileRepo): Promise<boolean> {
     const deltaFunc   = repo.diffDelta(this.state)
     const response    = await repo.schema.upsert(this.id, deltaFunc)
 
@@ -124,28 +173,37 @@ class PlayerStat {
   }
 
   /**
+   * Return an available groups to login
+   */
+  get loginAvailableGroups(): SHARED.GROUP[] {
+    return [SHARED.GROUP.ADMIN, SHARED.GROUP.MODERATOR]
+  }
+
+  /**
    * Create new player stats
    * @param {PlayerMp} player 
    */
-  static create(player: PlayerMp): PlayerStat {
-    const dto: SHARED.TYPES.PlayerStatDTO = PlayerStat.getDefault()
+  static create(player: PlayerMp): PlayerProfile {
+    const dto: SHARED.TYPES.PlayerProfileDTO = PlayerProfile.getDefault()
 
     dto.rgscId = player.rgscId
     dto.name   = player.name
 
-    return DomainConverter.fromDto(PlayerStat, dto)
+    return DomainConverter.fromDto(PlayerProfile, dto)
   }
 
   /**
    * Get default player stats DTO 
    */
-  static getDefault(): SHARED.TYPES.PlayerStatDTO {
+  static getDefault(): SHARED.TYPES.PlayerProfileDTO {
     return {
       rgscId        : "",
       name          : "",
       registered    : Date.now(),
       previousNames : [],
       timePlayed    : 0,
+      group         : SHARED.GROUP.USER,
+      password      : "",
       matches       : 0,
       wins          : 0,
       losses        : 0,
@@ -163,4 +221,4 @@ class PlayerStat {
   }
 }
 
-export { PlayerStat }
+export { PlayerProfile }

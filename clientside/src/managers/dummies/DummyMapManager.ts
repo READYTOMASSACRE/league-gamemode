@@ -1,8 +1,8 @@
 import { singleton, injectable } from "tsyringe";
 import { Dummy } from "../../entities/Dummy";
 import { Vector2, logbrowser } from "../../utils";
-import { Language } from "../../core/Language";
 import { NotFoundNotifyError } from "../../errors/PlayerErrors";
+import { DummyLanguageManager } from "./DummyLanguageManager";
 
 /**
  * Class to manage maps through the dummies
@@ -13,7 +13,7 @@ class DummyMapManager {
   private readonly type = SHARED.ENTITIES.MAP
   private readonly dummies: Dummy<SHARED.ENTITIES.MAP>[] = []
 
-  constructor(readonly lang: Language) {}
+  constructor(readonly lang: DummyLanguageManager) {}
   /**
    * Register all existing dummies
    */

@@ -1,7 +1,6 @@
 import { Dummy } from "../../entities/Dummy"
 import { singleton, injectable } from "tsyringe"
-import { Language } from "../../core/Language"
-
+import { DummyLanguageManager } from "./DummyLanguageManager"
 /**
  * Class to manage player stats through the dummies
  */
@@ -11,7 +10,7 @@ class DummyPlayerStatManager {
   private readonly type = SHARED.ENTITIES.PLAYER_STAT
   private dummies: Map<number, Dummy<SHARED.ENTITIES.PLAYER_STAT>> = new Map()
 
-  constructor(readonly lang: Language) {}
+  constructor(readonly lang: DummyLanguageManager) {}
 
   /**
    * Register all existing dummies
@@ -73,7 +72,7 @@ class DummyPlayerStatManager {
         : ''
 
       return {
-        name    : player.name,
+        name    : `[${player.remoteId}] ${player.name}`,
         state   : player.sharedData && this.getState(player.sharedData.state) || '',
         kill    : dummy.data.kill,
         death   : dummy.data.death,

@@ -31,6 +31,7 @@ class DummyConfigManager implements INTERFACES.Manager {
       LANGUAGE              : this.config.get('LANGUAGE'),
       ROUND_TIME_INTERVAL   : this.config.get('ROUND_TIME_INTERVAL_MINUTES'),
       VOTE                  : this.config.get('VOTE'),
+      HUD                   : this.config.get('HUD'),
     })
   }
 
@@ -42,6 +43,14 @@ class DummyConfigManager implements INTERFACES.Manager {
     const skins = this.dummy.data.TEAMS[teamId].SKINS
 
     return skins[getRandomInt(skins.length)]
+  }
+
+  /**
+   * Getting team data by teamId
+   * @param {SHARED.TEAMS} teamId 
+   */
+  getTeamData<T extends SHARED.TEAMS>(teamId: T): SHARED.TYPES.Teams[T] {
+    return this.dummy.data.TEAMS[teamId]
   }
 
   get dummy() {

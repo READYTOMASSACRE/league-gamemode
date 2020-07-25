@@ -3,7 +3,7 @@ import { Config } from './Config'
 import { logMethod } from '../utils/decorators'
 import { container, singleton, injectable, inject } from 'tsyringe'
 import { DbManager } from '../managers/DbManager'
-import { IsNotExistsError } from '../errors/LogErrors'
+import { IsNotExistsError, ServerError } from '../errors/LogErrors'
 import { ErrorHandler } from './ErrorHandler'
 import { green, blue, bold, red } from 'colors'
 
@@ -41,6 +41,8 @@ class Application {
     } catch (err) {
       const handled = this.errHandler.handle(err)
       if (!handled) throw err
+
+      return false
     }
 
     return true
@@ -52,6 +54,14 @@ class Application {
   private prepare(): void {
     if (mp.config.gamemode !== Application.GAMEMODE) {
       mp.config.gamemode = Application.GAMEMODE
+    }
+    const rcon = this.config.get("RCON")
+    if (
+      typeof rcon !== 'string'
+      || !rcon.length
+      || rcon === 'changeme'
+    ) {
+      throw new ServerError("Invalid RCON password in config.json. Please make sure the RCON is not empty and not equal 'changeme'.")
     }
   }
 

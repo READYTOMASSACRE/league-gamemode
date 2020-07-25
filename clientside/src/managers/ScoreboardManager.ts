@@ -6,9 +6,9 @@ import { eventable, event } from "rage-decorators"
 import { DummyConfigManager } from "./dummies/DummyConfigManager"
 import { DummyPlayerStatManager } from "./dummies/DummyPlayerStatManager"
 import { ErrorHandler } from "../core/ErrorHandler"
-import { Language } from "../core/Language"
 import { callServer } from "rage-rpc"
 import { DummyRoundStatManager } from "./dummies/DummyRoundStatManager"
+import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 
 /**
  * Class to manage the scoreboard
@@ -29,7 +29,7 @@ class ScoreboardManager {
     readonly dummyPlayerStat  : DummyPlayerStatManager,
     readonly dummyRoundStat   : DummyRoundStatManager,
     readonly errHandler       : ErrorHandler,
-    readonly lang             : Language,
+    readonly lang             : DummyLanguageManager,
   ) {
     this.open             = this.open.bind(this)
     this.close            = this.close.bind(this)
@@ -61,7 +61,7 @@ class ScoreboardManager {
   open(): void {
     this.opened = true
     this.tickCycle()
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_OPEN)
+    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, true)
   }
 
   /**
@@ -69,7 +69,7 @@ class ScoreboardManager {
    */
   close(): void {
     this.opened = false
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_CLOSE)
+    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, false)
   }
 
   /**
@@ -100,7 +100,6 @@ class ScoreboardManager {
       const playerTeams = this.dummyPlayerStat.getPlayersInfo(pings)
       
       const data = {
-        /** @todo get name from server */
         motd: this.dummyConfig.getServerName(),
         team: {
           [SHARED.TEAMS.ATTACKERS]: {

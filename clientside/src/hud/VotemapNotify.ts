@@ -1,25 +1,25 @@
-import { DummyConfigManager } from "../managers";
-import { Language } from "../core/Language";
-import { ErrorHandler } from "../core/ErrorHandler";
+import { Hud } from "./Hud"
+
+type NominateMapInfo = {
+  id: number
+  owner: number
+  vote: number[]
+  code: string
+  percent: number
+}
+
+export type NominateMaps = {
+  [key: number]: NominateMapInfo
+}
 
 /**
  * Hud element - VotemapNotify
  */
-class VotemapNotify implements INTERFACES.HudElement {
+class VotemapNotify extends Hud {
   static readonly SECOND = 1000
 
-  private secondInterval    : number
-  private stopped           : boolean = false
-  private running           : boolean = false
-
-  constructor (
-    readonly dummyConfig: DummyConfigManager,
-    readonly lang: Language,
-    readonly errHandler: ErrorHandler,
-  ) {
-    this.secondInterval   = 0
-    this.tick             = this.tick.bind(this)
-  }
+  private secondInterval    : number  = 0
+  private state             : NominateMaps = {}
 
   /**
    * @inheritdoc
@@ -28,42 +28,81 @@ class VotemapNotify implements INTERFACES.HudElement {
     this.stopped          = false
     this.secondInterval   = this.dummyConfig.getVoteIntervalSeconds()
 
-    this.tick()
+    mp.events.add(RageEnums.EventKey.RENDER, this.render)
+    this.tick(() => {
+      this.secondInterval -= 1
+      if (this.secondInterval < 0) this.stop()
+    })
   }
 
   /**
    * @inheritdoc
    */
   stop(): void {
-    this.stopped = true
-    this.running = false
+    mp.events.remove(RageEnums.EventKey.RENDER, this.render)
+    this.stopTick()
   }
 
   /**
-   * Render method
+   * Update the state of notify
+   * @param {string} jsonData - data from server
    */
-  tick(): void {
+  update(state: NominateMaps): void {
     try {
-      if (this.stopped || this.running) return
+      this.state = state
+      this.updatePercents()
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
 
-      this.running = true
+  /**
+   * @inheritdoc
+   */
+  render(): void {
+    try {
+      const voteText = this.lang.get(SHARED.MSG.VOTEMAP_NOTIFY, this.secondInterval + 's')
+      const nominatedMaps = this.getNominatedMaps()
+      const y = 0.1
+      const yDelta = 0.05
+      let delta = yDelta
+      const { scale: [ scaleX, scaleY ] } = this.textParams
   
-      mp.gui.chat.push(this.lang.get(SHARED.MSG.VOTEMAP_NOTIFY, this.secondInterval + 's'))
-
-      this.secondInterval--
-  
-      if (this.secondInterval < 0) {
-        this.stop()
-      } else {
-        setTimeout(() => {
-          this.running = false
-          this.tick()
-        }, VotemapNotify.SECOND)
-      }
+      mp.game.graphics.drawText(voteText, [0.5, y], this.textParams)
+      nominatedMaps.forEach(mapText => {
+        mp.game.graphics.drawText(mapText, [0.5, y + delta], { ...this.textParams, scale: [scaleX-0.2, scaleY-0.2]})
+        delta += yDelta
+      })
     } catch (err) {
       this.stop()
       if (!this.errHandler.handle(err)) throw err
     }
+  }
+
+  /**
+   * Update percents of voted players
+   */
+  private updatePercents(): void {
+    const total = Object
+      .values(this.state)
+      .reduce((accumulator, current) => accumulator + current.vote.length, 0)
+
+    Object
+      .entries(this.state)
+      .forEach(([key, data]) => {
+        this.state[+key].percent = Math.round(data.vote.length * 100 / total)
+      })
+  }
+
+  /**
+   * Format output
+   */
+  private getNominatedMaps(): string[] {
+    return Object
+      .values(this.state)
+      .map(({ code, vote, percent }) => 
+        `${code} - ${vote.length}, ${percent}%`
+      )
   }
 }
 

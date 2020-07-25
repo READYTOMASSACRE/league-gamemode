@@ -1,6 +1,7 @@
 import { callBrowser } from "rage-rpc"
 import { print } from "./print"
 import { format } from 'util'
+import { errorHandler } from "../bootstrap"
 
 /**
  * object.padding(number, string)
@@ -89,4 +90,16 @@ function colorGradient(fadeFraction: number, color1: RGB, color2: RGB): any {
   ]
 }
 
-export { keyBind, keyUnbind, logbrowser, hex2rgba, colorGradient }
+/**
+ * Format current time
+ */
+function getFormattedCurrentTime(): string {
+  const d               = new Date()
+  const hours           = d.getHours().toString().padStart(2, '0')
+  const minutes         = d.getMinutes().toString().padStart(2, '0')
+  const seconds         = d.getSeconds().toString().padStart(2, '0')
+
+  return `${hours}:${minutes}:${seconds}`
+}
+
+export { keyBind, keyUnbind, logbrowser, hex2rgba, colorGradient, getFormattedCurrentTime }

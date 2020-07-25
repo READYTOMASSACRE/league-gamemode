@@ -5,7 +5,7 @@ import TableHead from '@material-ui/core/TableHead'
 import TableRow from '@material-ui/core/TableRow'
 import TableCell from '@material-ui/core/TableCell'
 import TableBody from '@material-ui/core/TableBody'
-import { makeStyles, createStyles } from '@material-ui/core/styles'
+import { makeStyles } from '@material-ui/core/styles'
 import Paper from '@material-ui/core/Paper'
 import clsx from 'clsx'
 import { lang } from '../lib/Language'
@@ -18,7 +18,7 @@ const getLineHeight = (length: number) => {
 
   const deltaHeight = DEFAULT_LINE_HEIGHT - (length - DEFAULT_LENGTH) * DELTA
 
-  return deltaHeight > 0 && deltaHeight || 0
+  return deltaHeight > 0 ? deltaHeight : 0
 }
 
 // compile css styles
@@ -126,7 +126,7 @@ export default function Scoreboard(props: Props) {
             <TableCell className={classes.tdDefBroder}></TableCell>
           </TableRow>
           {DEFENDERS.players.map((row, index) => (
-            <TableRow key={index} className={row.player === 'Player4' && classes.currentPlayer || ""}>
+            <TableRow key={index} className={row.player === 'Player4' ? classes.currentPlayer : ""}>
               <TableCell className={clsx(classes.td, classes.tdDef)} component="th" scope="row">{row.name}</TableCell>
               <TableCell className={clsx(classes.td, classes.tdDef)} align="right">{row.state}</TableCell>
               <TableCell className={clsx(classes.td, classes.tdDef)} align="right">{row.kill}</TableCell>

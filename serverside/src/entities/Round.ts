@@ -75,7 +75,7 @@ class Round {
     this.playerManager.setState(player, SHARED.STATE.ALIVE)
     this.playerManager.spawn(player, vector)
 
-    player.call(SHARED.EVENTS.SERVER_ROUND_START, [this.mapId])
+    player.call(SHARED.EVENTS.SERVER_ROUND_START, [this.mapId, this.players.map(ppl => ppl.id)])
 
     return true
   }

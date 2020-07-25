@@ -1,5 +1,5 @@
 export class PlayerNotifyError extends Error {
-  public readonly args: string[]
+  public args: string[]
   constructor(message?: string, public readonly player?: PlayerMp | PlayerMp[], ...args: string[]) {
     super(message)
 
@@ -19,3 +19,6 @@ export class VoteError extends PlayerNotifyError {}
 export class VoteAddError extends PlayerNotifyError {}
 
 export class NotFoundNotifyError extends PlayerNotifyError {}
+export class InvalidArgumentNotify extends PlayerNotifyError {}
+export class InvalidLoginGroup extends PlayerNotifyError {}
+export class InvalidAccessNotify extends PlayerNotifyError {}

@@ -41,7 +41,7 @@ declare namespace TYPES {
   /**
    * Types of pouchdb records
    */
-  type PouchDbRecord    = { _id: string, _rev?: string }
-  type PlayerStatRecord = SHARED.TYPES.PlayerStatDTO & { _id: string }
-  type RoundStatRecord  = SHARED.TYPES.RoundStatDTO & { _id: number }
+  type PouchDbRecord          = { _id: string, _rev?: string }
+  type PlayerProfileRecord    = SHARED.TYPES.PlayerProfileDTO & { _id: string }
+  type RoundStatRecord        = SHARED.TYPES.RoundStatDTO & { _id: number }
 }

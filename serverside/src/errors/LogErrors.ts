@@ -8,4 +8,5 @@ export class ConsoleError extends LogError {}
 export class ServerError extends ConsoleError {}
 export class NullError extends ConsoleError {}
 export class IsNotExistsError extends ConsoleError {}
+export class InvalidArgument extends ConsoleError {}
 export class InvalidTypeError extends ConsoleError {}

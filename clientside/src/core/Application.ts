@@ -1,6 +1,5 @@
 import * as Managers from '../managers'
 import { container } from "tsyringe"
-import { Language } from './Language'
 
 /**
  * Core class of an application
@@ -12,8 +11,6 @@ export class Application {
    */
   start(): void {
     this.loadManagers()
-
-    const lang = new Language()
   }
   /**
    * Load all managers by factory config params

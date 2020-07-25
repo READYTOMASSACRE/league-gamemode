@@ -1,5 +1,5 @@
 import { singleton, inject, injectable } from "tsyringe"
-import { PlayerStat } from "../domains/PlayerStat"
+import { PlayerProfile } from "../domains/PlayerProfile"
 import { DomainConverter } from "../domains/DomainConverter"
 
 /**
@@ -7,26 +7,26 @@ import { DomainConverter } from "../domains/DomainConverter"
  */
 @singleton()
 @injectable()
-class PlayerStatRepo {
-  constructor(@inject(ENUMS.COLLECTIONS.PLAYERS) public readonly schema: PouchDB.Database<TYPES.PlayerStatRecord>) {}
+class PlayerProfileRepo {
+  constructor(@inject(ENUMS.COLLECTIONS.PLAYERS) public readonly schema: PouchDB.Database<TYPES.PlayerProfileRecord>) {}
 
   /**
    * Get a player by player rgscId
    * @param {PlayerMp} player 
    */
-  async getPlayerById(player: PlayerMp): Promise<PlayerStat> {
-    let playerStat: PlayerStat
+  async getPlayerById(player: PlayerMp): Promise<PlayerProfile> {
+    let playerStat: PlayerProfile
 
     try {
       const playerStatDTO = await this.schema.get(player.rgscId)
 
-      playerStat = DomainConverter.fromDto(PlayerStat, playerStatDTO)
+      playerStat = DomainConverter.fromDto(PlayerProfile, playerStatDTO)
       playerStat.setName(player.name)
 
       return playerStat
     } catch (err) {
       if (err.name === 'not_found') {
-        playerStat = PlayerStat.create(player)
+        playerStat = PlayerProfile.create(player)
         await playerStat.save(this)  
 
         return playerStat
@@ -40,9 +40,9 @@ class PlayerStatRepo {
    * Make the diff for upsert method
    * @param {SHARED.TYPES.PlayerStatDTO} state 
    */
-  diffDelta(state: SHARED.TYPES.PlayerStatDTO): PouchDB.UpsertDiffCallback<TYPES.PlayerStatRecord> {
+  diffDelta(state: SHARED.TYPES.PlayerProfileDTO): PouchDB.UpsertDiffCallback<TYPES.PlayerProfileRecord> {
     return (doc): any => ({ ...doc, ...state })
   }
 }
 
-export { PlayerStatRepo }
+export { PlayerProfileRepo }

@@ -1,7 +1,7 @@
 import { singleton, autoInjectable } from "tsyringe"
 import { callBrowser } from "rage-rpc"
 import { event, eventable } from "rage-decorators"
-import { Language } from "../core/Language"
+import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 
 /**
  * Class to manage client browsers
@@ -12,7 +12,7 @@ import { Language } from "../core/Language"
 class BrowserManager {
   private browser: Map<string, BrowserMp> = new Map()
 
-  constructor(readonly lang: Language) {
+  constructor(readonly lang: DummyLanguageManager) {
     this.browserInit = this.browserInit.bind(this)
   }
 

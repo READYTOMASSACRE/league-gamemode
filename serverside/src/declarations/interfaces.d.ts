@@ -3,6 +3,10 @@ declare namespace INTERFACES {
    * Manager interface
    */
   interface Manager {
+    /**
+     * Load manager into application
+     * @param {any} params (optional)
+     */
     load(params?: any): void
   }
 

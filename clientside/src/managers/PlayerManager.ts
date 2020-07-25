@@ -1,9 +1,10 @@
-import { Vector2, print } from "../utils"
+import { Vector2 } from "../utils"
 import { DialogManager } from "./DialogManager"
 import { BrowserManager } from "./BrowserManager"
 import { singleton, autoInjectable } from "tsyringe"
 import { command, commandable, eventable, event } from "rage-decorators"
-import { Language } from "../core/Language"
+import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
+import { ErrorHandler } from "../core/ErrorHandler"
 
 export const SHARED_DATA = "sharedData"
 const SETTER_NOT_ALLOWED = false
@@ -22,41 +23,35 @@ class PlayerManager {
   constructor(
     readonly dialogManager: DialogManager,
     readonly browserManager: BrowserManager,
-    readonly lang: Language,
+    readonly lang: DummyLanguageManager,
+    readonly errHandler: ErrorHandler,
   ) {
     this.weaponDialog         = this.weaponDialog.bind(this)
     this.toggleCursor         = this.toggleCursor.bind(this)
     this.initData             = this.initData.bind(this)
-    this.entityStreamIn       = this.entityStreamIn.bind(this)
-    this.notifyServerError    = this.notifyServerError.bind(this)
+    this.playerJoin           = this.playerJoin.bind(this)
+    this.changeLanguage       = this.changeLanguage.bind(this)
   }
 
   /**
    * Event
    * 
-   * Fires when the local player is streaming another player
-   * Adding the sharedData to the streaming player
+   * Fires when when a player joins the server
+   * Adding the sharedData to the player
    * @param {PlayerMp} player 
    */
-  @event(RageEnums.EventKey.ENTITY_STREAM_IN)
-  entityStreamIn(player: PlayerMp): void {
-    if (player.type === "player" && !player.sharedData) {
-      this.initSharedData(player, SETTER_NOT_ALLOWED)
+  @event(RageEnums.EventKey.PLAYER_JOIN)
+  playerJoin(player: PlayerMp): void {
+    try {
+      if (
+        player.handle !== this.player.handle
+        && !player.sharedData
+      ) {
+        this.initSharedData(player, SETTER_NOT_ALLOWED)
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
     }
-  }
-
-  /**
-   * Event
-   * 
-   * Fires when the server has sent an error
-   * 
-   * @param {string} name - the name of an error
-   * @param {string} message - the error message
-   * @param {string[]} args - additional info
-   */
-  @event(SHARED.EVENTS.SERVER_NOTIFY_ERROR)
-  notifyServerError(name: string, message: string, ...args: string[]): void {
-    print.info(name, this.lang.get(message, ...args))
   }
 
   /**
@@ -71,11 +66,57 @@ class PlayerManager {
   }
 
   /**
+   * Command
+   * 
+   * Get an access to change the current language
+   * @param {string} cmdDesc 
+   * @param {string} lang - code of the language
+   */
+  @command(["cl", "changelang"], { desc: "{{cmdName}}" })
+  changeLanguage(cmdDesc: string, lang: string): void {
+    try {
+      if (!lang) {
+        mp.gui.chat.push(
+          this.lang
+            .get(SHARED.MSG.CMD_DESC_CHANGE_LANG)
+            .replace("{{cmdName}}", cmdDesc)
+        )
+      } else {
+        this.loadLanguage(lang)
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Load the available language
+   * @param {string} lang 
+   */
+  loadLanguage(lang: string): void {
+    try {
+      const messages = this.lang.getMessages(lang)
+      this.player.sharedData.lang = lang
+      this.browserManager.callBrowser(ENUMS.CEF.MAIN, SHARED.RPC.CLIENT_LANGUAGE, messages)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
    * Init custom and shared data
    */
   initData(): void {
     this.initCustomData()
     this.initSharedData(this.player)
+    mp.players.forEach(player => {
+      if (
+        player.handle !== this.player.handle
+        && !player.sharedData
+      ) {
+        this.initSharedData(player, SETTER_NOT_ALLOWED)
+      }
+    })
   }
 
   /**
@@ -226,6 +267,27 @@ class PlayerManager {
    */
   weaponDialog(): void {
     this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_OPEN)
+  }
+
+  /**
+   * Return players with state
+   * @param {SHARED.STATE | SHARED.STATE[]} state
+   */
+  getPlayersWithState(state: SHARED.STATE | SHARED.STATE[]): PlayerMp[] {
+    const states = Array.isArray(state) && state || [state]
+    const players: PlayerMp[] = []
+
+    mp.players.forEach(player => {
+      if (
+        mp.players.exists(player)
+        && player.sharedData
+        && states.indexOf(player.sharedData.state) !== -1
+      ) {
+        players.push(player)
+      }
+    })
+
+    return players
   }
 }
 

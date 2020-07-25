@@ -1,5 +1,5 @@
 import { keyBind, keyUnbind } from "../utils/functions"
-import { PlayerManager } from "../managers"
+import { PlayerManager, HudManager } from "../managers"
 import { ErrorHandler } from "../core/ErrorHandler"
 
 type PlayerTeam = TYPES.PlayerTeam & { PEDS: PedMp[] }
@@ -17,6 +17,7 @@ type TeamSelectorParams = {
   teams: TYPES.PlayerTeam[]
   playerManager: PlayerManager
   errHandler: ErrorHandler
+  hudManager: HudManager
 }
 
 /**
@@ -29,6 +30,7 @@ class TeamSelector implements INTERFACES.Interaction {
   private teams               : PlayerTeam[]
   private playerManager       : PlayerManager
   private errHandler          : ErrorHandler
+  private hudManager          : HudManager
   private cam                 : CameraMp
 
   private currentTeamIndex    : number
@@ -48,6 +50,7 @@ class TeamSelector implements INTERFACES.Interaction {
     this.pedVector     = params.pedVector
     this.pedHeading    = params.pedHeading
     this.pedDimension  = params.pedDimension || this.pedDimension
+    this.hudManager    = params.hudManager
 
     this.teams         = params.teams.map(({ ID, NAME, SKINS, COLOR }) => ({
       ID,
@@ -83,6 +86,8 @@ class TeamSelector implements INTERFACES.Interaction {
     this.prepareCam(true)
     this.refreshPeds(true)
     this.bindKeys()
+    this.hudManager.teamSelecting.setTeamData(this.currentTeam.ID)
+    this.hudManager.teamSelecting.start()
   }
 
   /**
@@ -93,6 +98,8 @@ class TeamSelector implements INTERFACES.Interaction {
     this.preparePlayer(false)
     this.prepareCam(false)
     this.refreshPeds(false)
+    this.hudManager.teamSelecting.stop()
+
     mp.events.remove(RageEnums.EventKey.ENTITY_STREAM_IN, this.streamIn)
   }
 
@@ -185,7 +192,7 @@ class TeamSelector implements INTERFACES.Interaction {
       : this.teams.length - 1
     this.refreshPeds(true)
 
-    mp.gui.chat.push(this.currentTeam.NAME)
+    this.hudManager.teamSelecting.setTeamData(this.currentTeam.ID)
   }
 
   /**
@@ -197,7 +204,7 @@ class TeamSelector implements INTERFACES.Interaction {
       : 0
     this.refreshPeds(true)
 
-    mp.gui.chat.push(this.currentTeam.NAME)
+    this.hudManager.teamSelecting.setTeamData(this.currentTeam.ID)
   }
 
   /**

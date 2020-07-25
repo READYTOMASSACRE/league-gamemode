@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import { readFileSync } from 'fs'
 import { magenta } from 'colors'
 import { inspect } from 'util'
+import { createHash } from 'crypto'
 
 function getRandomInt(max: number): number {
   return Math.floor(Math.random() * Math.floor(max))
@@ -55,4 +56,49 @@ function logWrapper(wrappedFunc: Function, objectName?: string) {
   }
 }
 
-export { getRandomInt, getProjectDir, getSrcDir, getJsonFromFileSync, logWrapper }
+/**
+ * Format current time
+ */
+function getFormattedCurrentTime(): string {
+  const d               = new Date()
+  const hours           = d.getHours().toString().padStart(2, '0')
+  const minutes         = d.getMinutes().toString().padStart(2, '0')
+  const seconds         = d.getSeconds().toString().padStart(2, '0')
+
+  return `${hours}:${minutes}:${seconds}`
+}
+
+/**
+ * Wrapper of Object.keys to return keyof O
+ * @param {O} o - the any type object
+ */
+function keys<O>(o: O) {
+  return Object.keys(o) as (keyof O)[];
+}
+
+/**
+ * Return hash256 of string
+ * @param {string} str 
+ */
+const hash256 = (str: string) => {
+  const hash = createHash('sha256')
+  return hash.update(str).digest('hex')
+}
+
+/**
+ * Escape a regexp pattern
+ * @param {string} string 
+ */
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+/**
+ * Check if parameter is number
+ * @param {string} n 
+ */
+function isNumber(n: string) {
+  return !isNaN(parseFloat(n)) && !isNaN(+n - 0)
+}
+
+export { getRandomInt, getProjectDir, getSrcDir, getJsonFromFileSync, logWrapper, getFormattedCurrentTime, keys, hash256, escapeRegExp, isNumber }

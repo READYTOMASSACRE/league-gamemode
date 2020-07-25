@@ -1,6 +1,5 @@
-import { DummyConfigManager } from "../managers"
-import { colorGradient } from "../utils"
-import { ErrorHandler } from "../core/ErrorHandler"
+import { Hud } from "./Hud"
+import { colorGradient, hex2rgba } from "../utils"
 
 interface TextParams {
   font: number
@@ -19,20 +18,23 @@ interface HealthParams {
 /**
  * Hud element - Nametag
  */
-class Nametag implements INTERFACES.HudElement {
+class Nametag extends Hud {
   static readonly MAX_DISTANCE = 2625
   static readonly VISIBLE_BIT_MAP = 1 | 16 | 256
 
-  private _textParams?: TextParams
-  private _healthParams?: HealthParams
-  private player = mp.players.local
+  private _healthParams?    : HealthParams
+  private _colorGradient?   : [RGB, RGB]
+  private player            = mp.players.local
+  private maxDistance       = 0
 
-  constructor(
-    readonly dummyConfig: DummyConfigManager,
-    readonly errHandler: ErrorHandler,
-  ) {
-    mp.nametags.enabled   = false
-    this.render           = this.render.bind(this)
+  /**
+   * @inheritdoc
+   */
+  prepare(): void {
+    const { MAX_DISTANCE } = this.dummyConfig.getNameTagConfig()
+
+    mp.nametags.enabled    = false
+    this.maxDistance       = MAX_DISTANCE || Nametag.MAX_DISTANCE
   }
 
   /**
@@ -42,7 +44,7 @@ class Nametag implements INTERFACES.HudElement {
     mp.events.add(RageEnums.EventKey.RENDER, this.render)
   }
 
-/**
+  /**
    * @inheritdoc
    */
   stop(): void {
@@ -59,10 +61,10 @@ class Nametag implements INTERFACES.HudElement {
         const [ player, x, y, distance ]: [ PlayerMp, number, number, number ] = nametag
   
         if (
-          distance <= Nametag.MAX_DISTANCE
-          &&  this.isVisible(player)
+          distance <= this.maxDistance
+          && this.isVisible(player)
         ) {
-          this.drawNickname(player.name, [x, y])
+          this.drawNickname(player, [x, y])
           this.drawHealth(x, y, player.getHealth())
         }
       })
@@ -74,11 +76,23 @@ class Nametag implements INTERFACES.HudElement {
 
   /**
    * Draw nicknames on the screen
-   * @param {string} name - player name
+   * @param {PlayerMp} player
    * @param {Array2d} xy - position
    */
-  private drawNickname(name: string, xy: Array2d): void {
-    mp.game.graphics.drawText(name, xy, this.textParams)
+  private drawNickname(player: PlayerMp, xy: Array2d): void {
+    const color = this.getTeamColor(player) || this.textParams.color
+    mp.game.graphics.drawText(player.name, xy, { ...this.textParams, color })
+  }
+
+  /**
+   * Get a player's color
+   * @param {PlayerMp} player 
+   */
+  private getTeamColor(player: PlayerMp): RGBA | void {
+    if (player.sharedData) {
+      const team = this.dummyConfig.getTeam(player.sharedData.teamId)
+      if (team.COLOR) return hex2rgba(team.COLOR, 255)
+    }
   }
 
   /**
@@ -96,7 +110,7 @@ class Nametag implements INTERFACES.HudElement {
     const [r, g, b]                   = this.getColorHealth(health)
 
     mp.game.graphics.drawRect(x, y, width + border * 2, height + border * 2, 0, 0, 0, 200)
-    mp.game.graphics.drawRect(x, y, width, height, 150, 150, 150, 200)
+    mp.game.graphics.drawRect(x, y, width, height, 150, 150, 150, 50)
     mp.game.graphics.drawRect(x - healthOffsetx, y, healthWidth, height, r, g, b, 255)
   }
 
@@ -137,37 +151,47 @@ class Nametag implements INTERFACES.HudElement {
    * @param {number} health 
    */
   private getColorHealth(health: number): RGBA {
-    const greenColor    : RGB = [69, 243, 25]
-    const redColor      : RGB = [226, 14, 15]
+    const [EMPTY, FULL] = this.colorGradient
 
-    return colorGradient(health / 100, redColor, greenColor)
+    return colorGradient(health / 100, EMPTY, FULL)
   }
 
   private get healthParams(): HealthParams {
-    /** @todo get from config */
     if (!this._healthParams) {
+      const { HEALTH_BAR: { WIDTH, HEIGHT, BORDER } } = this.dummyConfig.getNameTagConfig()
+
       this._healthParams = {
-        width: 0.06,
-        height: 0.0105,
-        border: 0.0015,
+        width: WIDTH,
+        height: HEIGHT,
+        border: BORDER,
       }
     }
 
     return this._healthParams
   }
-  private get textParams(): TextParams {
+  get textParams(): TextParams {
     if (!this._textParams) {
-      /** @todo get from config */
+      const { NICKNAME: { FONT, CENTRE, SCALE, OUTLINE } } = this.dummyConfig.getNameTagConfig()
+
       this._textParams = {
-        font    : 4,
-        centre  : false,
+        font    : FONT,
+        centre  : CENTRE,
         color   : [255, 255, 255, 255],
-        scale   : [0.6, 0.6],
-        outline : true,
+        scale   : SCALE,
+        outline : OUTLINE,
       }
     }
 
     return this._textParams
+  }
+
+  private get colorGradient(): [RGB, RGB] {
+    if (!this._colorGradient) {
+      const { HEALTH_BAR: { GRADIENT } } = this.dummyConfig.getNameTagConfig()
+      this._colorGradient = [GRADIENT.EMPTY, GRADIENT.FULL]
+    }
+
+    return this._colorGradient
   }
 }
 

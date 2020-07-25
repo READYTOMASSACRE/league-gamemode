@@ -20,26 +20,21 @@ const defaultProps = {
 
 export default function ScoreboardData() {
   // register setState handlers
-  const [open, setOpen] = React.useState(false)
-  const [rendered, setRendered] = React.useState(false)
-  const [data, setData] = React.useState({})
+  const [open, setOpen]       = React.useState(false)
+  const [render, setRender]   = React.useState(false)
+  const [props, setProps]     = React.useState({})
+
+  const initData = () => {
+    if (render) return
+
+    setRender(true)
+    register(RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, ([ toggle ]) => setOpen(toggle))
+    register(RPC_DIALOG.CLIENT_SCOREBOARD_DATA, ([ props ]) => setProps(props))
+  }
 
   // effect hook to register rpc calls
-  React.useEffect(() => {
-    setRendered(true)
-    if (!rendered) {
-      register(RPC_DIALOG.CLIENT_SCOREBOARD_OPEN, () => setOpen(true))
-      register(RPC_DIALOG.CLIENT_SCOREBOARD_CLOSE, () => setOpen(false))
-      register(RPC_DIALOG.CLIENT_SCOREBOARD_DATA, (data: any[]) => {
-        const [ props ] = data
-        setData(props)
-      })
-    }
-  }, [rendered])
-
-  // pass the new data into props
-  const props = { ...defaultProps, ...data }
+  React.useEffect(initData, [render])
 
   // render Scoreboard
-  return <Scoreboard open={open} {...props} />
+  return <Scoreboard open={open} {...{...defaultProps, ...props}} />
 }

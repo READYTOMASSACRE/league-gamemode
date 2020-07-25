@@ -7,8 +7,11 @@ import { singleton, autoInjectable, inject } from "tsyringe"
 import { DummyMapManager } from "./dummies/DummyMapManager"
 import { PlayerManager } from "./PlayerManager"
 import { RoundStatManager } from "./RoundStatManager"
-import { RoundIsRunningError } from "../errors/PlayerErrors"
+import { RoundIsRunningError, InvalidAccessNotify } from "../errors/PlayerErrors"
 import { ErrorHandler } from "../core/ErrorHandler"
+import { VoteMapManager } from "./VoteMapManager"
+import { GroupManager } from "./GroupManager"
+import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 
 const [x, y, z] = app.getConfig().get('LOBBY')
 
@@ -26,18 +29,24 @@ class RoundManager {
   static readonly ROUND_DIMENSION = 1
 
   round?: Round
+  private voteTimer?: NodeJS.Timeout
 
   constructor(
-    readonly dummyMapManager: DummyMapManager,
-    readonly weaponManager: WeaponManager,
-    readonly playerManager: PlayerManager,
-    readonly roundStatManager: RoundStatManager,
-    @inject(ErrorHandler) readonly errHandler: ErrorHandler
+    readonly dummyMapManager    : DummyMapManager,
+    readonly weaponManager      : WeaponManager,
+    readonly playerManager      : PlayerManager,
+    readonly roundStatManager   : RoundStatManager,
+    readonly voteManager        : VoteMapManager,
+    readonly groupManager       : GroupManager,
+    readonly errHandler         : ErrorHandler,
+    readonly lang               : DummyLanguageManager
   ) {
-    this.playerDeath    = this.playerDeath.bind(this)
-    this.playerQuit     = this.playerQuit.bind(this)
-    this.roundStartCmd  = this.roundStartCmd.bind(this)
-    this.roundEndCmd    = this.roundEndCmd.bind(this)
+    this.playerDeath          = this.playerDeath.bind(this)
+    this.playerQuit           = this.playerQuit.bind(this)
+    this.roundStartCmd        = this.roundStartCmd.bind(this)
+    this.roundEndCmd          = this.roundEndCmd.bind(this)
+    this.voteCmd              = this.voteCmd.bind(this)
+    this.voteTimeoutHandler   = this.voteTimeoutHandler.bind(this)
   }
 
   /**
@@ -86,7 +95,6 @@ class RoundManager {
   }
 
   /**
-   * @todo add admin privilege
    * Commmand
    * 
    * Starts the new round
@@ -94,6 +102,12 @@ class RoundManager {
   @command(['roundstart', 'rs'])
   roundStartCmd(player: PlayerMp, _: string, mapIdOrCode: string): void {
     try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        const lang = this.playerManager.getLang(player)
+        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
+        throw new InvalidAccessNotify(message, player)
+      }
+
       this.roundStart(mapIdOrCode, player)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
@@ -101,16 +115,53 @@ class RoundManager {
   }
 
   /**
-   * @todo add admin privilege
    * Commmand
    * 
    * End the round
+   * @param {PlayerMp} player
    */
   @logMethod(DEBUG)
   @command(['roundend', 're'])
-  roundEndCmd(): void {
+  roundEndCmd(player: PlayerMp): void {
     try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        const lang = this.playerManager.getLang(player)
+        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
+        throw new InvalidAccessNotify(message, player)
+      }
+
       this.roundEnd()
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Command
+   * 
+   * Vote for the map
+   * @param {PlayerMp} player
+   * @param {string} cmdDesc
+   * @param {string} mapIdOrCode - the choice of a player
+   */
+  @command(["vote", "votemap"], { desc: '{{cmdName}}' })
+  voteCmd(player: PlayerMp, cmdDesc: string, mapIdOrCode?: string): void {
+    try {
+      if (typeof mapIdOrCode === 'undefined') {
+        const lang = this.playerManager.getLang(player)
+        const message = this.lang.get(lang, SHARED.MSG.CMD_DESC_VOTE)
+        return player.outputChatBox(message.replace('{{cmdName}}', cmdDesc))
+      }
+  
+      if (
+        this.voteManager.isFirstNominate
+        && !this.voteTimer
+      ) {
+        this.voteTimer = setTimeout(this.voteTimeoutHandler, this.voteManager.nominateTime)
+      }
+      this.voteManager.vote(player, mapIdOrCode)
+
+
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -123,11 +174,17 @@ class RoundManager {
    * 
    * @throws {RoundIsRunningError}
    */
-  roundStart(mapIdOrCode: string, player?: PlayerMp): void {
+  roundStart(mapIdOrCode: string, player?: PlayerMp): boolean {
     const players = this.playerManager.getEntitiesWithState(SHARED.STATE.IDLE)
 
     if (this.isRoundRunning) {
       throw new RoundIsRunningError(SHARED.MSG.ERR_ROUND_IS_RUNNING, player || players)
+    }
+
+    /* clear the vote timer if exists */
+    if (this.voteTimer) {
+      clearTimeout(this.voteTimer)
+      this.voteTimer = undefined
     }
 
     /* create a new round */
@@ -142,17 +199,23 @@ class RoundManager {
       playerManager:     this.playerManager,
     })
 
-    
     this.round.start()
+
+    return true
   }
 
   /**
    * Invoke an end of the round
    */
   @logMethod(DEBUG)
-  roundEnd(): void {
+  roundEnd(): boolean {
     /* invoke ending of the round */
-    if (this.round && this.isRoundRunning) this.round.end()
+    if (this.round && this.isRoundRunning) {
+      this.round.end()
+      return true
+    }
+
+    return false
   }
 
   /**
@@ -164,6 +227,20 @@ class RoundManager {
     const teamId = this.playerManager.getTeam(player)
 
     if (!round.hasAlivePlayers(teamId)) this.roundEnd()
+  }
+
+  /**
+   * Start a timeout of voting
+   */
+  voteTimeoutHandler(): void {
+    try {
+      const map = this.voteManager.getWinner()
+  
+      this.voteManager.stop()
+      this.roundStart(map.toString())
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
   }
 
   /**

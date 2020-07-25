@@ -1,5 +1,6 @@
 {
   "DEBUG": false,
+  "RCON": "changeme",
   "LANGUAGE": "en",
   "LOBBY": [-1026.7474365234375, -364.5588073730469, 36.930908203125],
   "DB_PATH": "./packages/league/assets/pouchdb",
@@ -31,7 +32,8 @@
     },
     "SPECTATORS": {
       "NAME": "Spectators",
-      "SKINS": ["cs_priest", "csb_vagspeak"]
+      "SKINS": ["cs_priest", "csb_vagspeak"],
+      "COLOR": "#ffffff"
     }
   },
   "TEAM_SELECTOR": {
@@ -49,6 +51,35 @@
   },
   "VOTE": {
     "MAX_NOMINATE": 5,
-    "TIME": 10
+    "TIME": 30
+  },
+  "HUD": {
+    "GLOBAL": {
+      "TEXT": {
+        "FONT": 4,
+        "CENTRE": false,
+        "SCALE": [0.6, 0.6],
+        "COLOR": [255, 255, 255, 255],
+        "OUTLINE": true
+      }
+    },
+    "NAMETAG": {
+      "MAX_DISTANCE": 2625,
+      "NICKNAME": {
+        "FONT": 4,
+        "CENTRE": false,
+        "SCALE": [0.6, 0.6],
+        "OUTLINE": true
+      },
+      "HEALTH_BAR": {
+        "WIDTH": 0.06,
+        "HEIGHT": 0.0105,
+        "BORDER": 0.0015,
+        "GRADIENT": {
+          "FULL": [69, 243, 25],
+          "EMPTY": [226, 14, 15]
+        }
+      }
+    }
   }
 }
