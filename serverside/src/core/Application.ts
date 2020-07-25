@@ -15,7 +15,7 @@ import { green, blue, bold, red } from 'colors'
 class Application {
   static readonly RECOMMENDED_PLAYERS = 32
   static readonly GAMEMODE = 'League'
-  static readonly VERSION  = '0.1.0'
+  static readonly VERSION  = '0.2.0'
 
   managers: Map<any, INTERFACES.Manager> = new Map<any, INTERFACES.Manager>()
   repositories: Map<any, any> = new Map()
