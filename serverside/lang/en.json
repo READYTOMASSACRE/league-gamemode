@@ -1,7 +1,15 @@
 {
-  "CMD_DESC_SAVE_POS"                 : "Usage {{cmdName}} [pointname]",
-  "CMD_DESC_VOTE"                     : "Usage {{cmdName}} [id|code] - Nominate the map to start",
-  "CMD_DESC_CHANGE_LANG"              : "Usage /{{cmdName}} [lang] - Change the interface language",
+  "CMD_SAVE_POS"                      : "Usage /{{cmdName}} [pointname]",
+  "CMD_VOTE"                          : "Usage /{{cmdName}} [id|code] - Nominate the map to start",
+  "CMD_CHANGE_LANG"                   : "Usage /{{cmdName}} [lang] - Change the interface language",
+  "CMD_ADD_TO_ROUND"                  : "Usage /{{cmdName}} [id|nickname] - To add a player in the round",
+  "CMD_REMOVE_FROM_ROUND"             : "Usage /{{cmdName}} [id|nickname] - To remove a player from the round",
+  "CMD_KICK"                          : "Usage /{{cmdName}} [id|nickname] [reason]",
+  "CMD_MUTE"                          : "Usage /{{cmdName}} [id|nickname] [minutes] [reason]",
+  "CMD_UNMUTE"                        : "Usage /{{cmdName}} [id|nickname]",
+  "CMD_CHANGE_TEAM"                   : "Usage /{{cmdName}} [id|nickname] [att|def|spec] - Change a team for the player",
+  "CMD_ROUND_START"                   : "Usage /{{cmdName}} [map id|code] - Start a round by map id or code",
+  "CMD_ROUND_END"                     : "Usage /{{cmdName}} - Stop a round",
 
   "PAGE_SHOW_CMD"                     : "Page: %s, showing commands [%s..%s] of %s",
 
@@ -23,6 +31,8 @@
   "ERR_LANG_NOT_FOUND"                : "Language %s not found",
   "ERR_WEAPON_NOT_FOUND"              : "Weapons aren't avaliable",
   "ERR_WRONG_TYPE"                    : "Wrong type %s",
+  "ERR_PROFILE_NOT_FOUND"             : "Player's profile not found",
+  "ERR_ROUND_PLAYER_NOT_FOUND"        : "Player's stats in round not found",
   "ERR_TOO_MANY_MAPS"                 : "Too many maps: %s",
   "ERR_TOO_MANY_PLAYERS"              : "Too many players: %s",
 
@@ -33,6 +43,10 @@
 
   "ERR_ROUND_IS_NOT_RUNNING"          : "Round is not running",
   "ERR_ROUND_IS_RUNNING"              : "Round is running",
+  "ERR_ROUND_IS_PAUSED"               : "Round is paused already",
+  "ERR_ROUND_IS_UNPAUSED"             : "Round is not paused",
+  "ERR_PLAYER_IN_ROUND"               : "%s is in the round",
+  "ERR_PLAYER_NOT_IN_ROUND"           : "%s is not in the round",
 
   "TEAM_SELECTOR_CHANGE"              : "You will change your team after your next death",
   "TEAM_SELECTOR_CHANGE_CANCEL"       : "You canceled a team change",
@@ -53,12 +67,21 @@
   "ALIVE"                             : "Alive",
   "DEAD"                              : "Dead",
 
+  "CONTROL"                           : "Controls:",
+  "CONTROL_SCOREBOARD"                : "Scoreboard",
+  "CONTROL_GAMEMENU"                  : "Gamemenu",
+  "CONTROL_TEAMCHANGE"                : "Teamchange",
+
   "SCOREBOARD_PLAYERS"                : "Players",
   "TIME_REMAINING"                    : "Time: %s",
   "VOTEMAP_NOTIFY"                    : "Time left to vote: %s",
   "WEAPON_CHOOSE_TEXT"                : "Choice a weapon, %s",
+
   "ROUND_START_MESSAGE"               : "%s - Round has started",
   "ROUND_STOP_MESSAGE"                : "Round has finished",
+  "ROUND_PAUSED_MESSAGE"              : "Paused",
+  "ROUND_ADD_TO_ROUND_SUCCESS"        : "%s has been added to the round successfuly",
+  "ROUND_REMOVE_FROM_ROUND_SUCCESS"   : "%s has been removed from the round successfuly",
 
   "GROUP_LOGIN_SUCCESS"               : "!{lightgreen}Successfuly logged as %s",
   "GROUP_LOGIN_FAILURE"               : "!{brown}Invalid password to login as %s",
@@ -78,5 +101,30 @@
   "PLAYER_MUTED"                      : "!{brown}Player %s has been muted by %s. Reason: %s, time: %s minute(s)",
   "PLAYER_UNMUTED"                    : "!{brown}Player %s has been unmuted by %s.",
   "PLAYER_IS_MUTED"                   : "!{brown}You have been muted. Time left: %s",
-  "REASON_NULL"                       : "No reason"
+  "PLAYER_CHANGED_TEAM"               : "%s's team has been changed to %s",
+  "PLAYER_JOINED"                     : "!{orange}%s !{white}has joined to the server",
+  "PLAYER_LEFT"                       : "!{orange}%s !{white}has left from the server !{brown}[%s]",
+  "REASON_NULL"                       : "No reason",
+
+  "GAMEMENU_PROFILE"                  : "Profile",
+  "GAMEMENU_PROFILE_TITLE"            : "%s's profile",
+
+  "GAMEMENU_PLAYERS"                  : "Players",
+  "GAMEMENU_PLAYERS_TD_ID"            : "id",
+  "GAMEMENU_PLAYERS_TD_NAME"          : "name",
+  "GAMEMENU_PLAYERS_TD_MMR"           : "mmr",
+  "GAMEMENU_PLAYERS_TD_ACTIONS"       : "actions",
+
+  "GAMEMENU_HISTORY"                  : "History",
+  "GAMEMENU_HISTORY_TD_RESULT"        : "Result",
+  "GAMEMENU_HISTORY_TD_DATE"          : "Date",
+  "GAMEMENU_HISTORY_TD_KDA"           : "KDA",
+
+  "GAMEMENU_VOTE"                     : "Vote",
+  "GAMEMENU_VOTE_LABEL"               : "Find map",
+  "GAMEMENU_VOTE_PLACEHOLDER"         : "Find by id/code",
+  "GAMEMENU_VOTE_NOMINATE"            : "Nominate",
+
+  "GAMEMENU_TOP"                      : "Top 100",
+  "GAMEMENU_CREDITS"                  : "Changelog & Credits"
 }

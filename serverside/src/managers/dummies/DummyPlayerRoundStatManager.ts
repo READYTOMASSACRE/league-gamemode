@@ -28,7 +28,6 @@ class DummyPlayerRoundStatManager {
       const dto   = RoundStat.getDefault()
       dto.id      = player.id
       dto.rgscId  = player.rgscId
-      dto.teamId  = player.sharedData.teamId
 
       const dummy = new Dummy(SHARED.ENTITIES.PLAYER_STAT, dto)
 

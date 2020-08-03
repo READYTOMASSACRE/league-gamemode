@@ -4,7 +4,8 @@ import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 import { PlayerManager } from "./PlayerManager"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { GroupManager } from "./GroupManager"
-import { InvalidAccessNotify } from "../errors/PlayerErrors"
+import { InvalidAccessNotify, InvalidArgumentNotify } from "../errors/PlayerErrors"
+import { cmdName } from "../utils"
 
 /**
  * Manage all cmds in the serverside
@@ -75,34 +76,34 @@ class CommandManager {
    * @param {string} playerIdOrName player id or name
    * @param {string} reason (optional) reason of kick
    */
-  @command('kick')
+  @command('kick', { desc: cmdName })
   kick(player: PlayerMp, cmdDesc: string, playerIdOrName?: string, ...reason: string[]): void {
     try {
       const lang = this.playerManager.getLang(player)
       if (this.groupManager.isUser(player)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
   
       if (typeof playerIdOrName === 'undefined') {
-        this.playerManager.notify(player, cmdDesc)
-        return
+        const lang = this.playerManager.getLang(player)
+        const cmdDescText = this.lang
+          .get(lang, SHARED.MSG.CMD_KICK)
+          .replace(cmdName, cmdDesc)
+
+        return this.playerManager.notify(player, cmdDescText)
       }
   
       const kickedPlayer: PlayerMp = this.playerManager.getPlayerByIdOrName(playerIdOrName, player)
 
       if (!this.groupManager.hasUpperGroupThan(player, kickedPlayer)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
 
       const kickReason = reason.length && reason.join(' ') || ""
 
       mp.players.forEach(player => {
-        const lang = this.playerManager.getLang(player)
         const localeReason = kickReason.length && kickReason || this.lang.get(lang, SHARED.MSG.REASON_NULL)
-        const message = this.lang.get(lang, SHARED.MSG.PLAYER_KICKED, kickedPlayer.name, player.name, localeReason)
-        player.outputChatBox(message)
+        this.playerManager.info(player, SHARED.MSG.PLAYER_KICKED, kickedPlayer.name, player.name, localeReason)
       })
 
       kickedPlayer.kick(kickReason)
@@ -121,25 +122,26 @@ class CommandManager {
    * @param {string} minutes (optional) time to mute
    * @param {string} reason (optional) reason of muted
    */
-  @command('mute')
+  @command('mute', { desc: cmdName })
   mute(player: PlayerMp, cmdDesc: string, playerIdOrName?: string, minutes?: string, ...reason: string[]): void {
     try {
-      const lang = this.playerManager.getLang(player)
       if (this.groupManager.isUser(player)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
   
       if (typeof playerIdOrName === 'undefined') {
-        this.playerManager.notify(player, cmdDesc)
-        return
+        const lang = this.playerManager.getLang(player)
+        const cmdDescText = this.lang
+          .get(lang, SHARED.MSG.CMD_MUTE)
+          .replace(cmdName, cmdDesc)
+
+        return this.playerManager.notify(player, cmdDescText)
       }
 
       const mutedPlayer = this.playerManager.getPlayerByIdOrName(playerIdOrName, player)
 
       if (!this.groupManager.hasUpperOrSameGroupWith(player, mutedPlayer)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
 
       const mutedReason = reason.length && reason.join(' ') || ""
@@ -166,25 +168,26 @@ class CommandManager {
    * @param {string} cmdDesc - the command description
    * @param {string} playerIdOrName player id or name
    */
-  @command('unmute')
+  @command('unmute', { desc: cmdName })
   unmute(player: PlayerMp, cmdDesc: string, playerIdOrName?: string): void {
     try {
-      const lang = this.playerManager.getLang(player)
       if (this.groupManager.isUser(player)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
   
       if (typeof playerIdOrName === 'undefined') {
-        this.playerManager.notify(player, cmdDesc)
-        return
+        const lang = this.playerManager.getLang(player)
+        const cmdDescText = this.lang
+          .get(lang, SHARED.MSG.CMD_UNMUTE)
+          .replace(cmdName, cmdDesc)
+
+        return this.playerManager.notify(player, cmdDescText)
       }
 
       const mutedPlayer = this.playerManager.getPlayerByIdOrName(playerIdOrName, player)
 
       if (!this.groupManager.hasUpperOrSameGroupWith(player, mutedPlayer)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
 
       mp.players.forEach(player => {
@@ -194,6 +197,55 @@ class CommandManager {
       })
 
       this.playerManager.unmute(mutedPlayer)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Command
+   * 
+   * Change team to a player
+   * @param {PlayerMp} player
+   * @param {string} cmdDesc
+   * @param {string} idOrName - id or nickname an adding player
+   */
+  @command(['changeteam', 'ct'], { desc: cmdName })
+  changeTeamCmd(player: PlayerMp, cmdDesc: string, idOrName?: string, teamId?: 'att' | 'def' | 'spec'): void {
+    try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      if (
+        typeof idOrName === 'undefined'
+        || typeof teamId === 'undefined'
+        || ['att', 'def', 'spec'].indexOf(teamId) === -1
+      ) {
+        const lang = this.playerManager.getLang(player)
+        const cmdDescText = this.lang
+          .get(lang, SHARED.MSG.CMD_CHANGE_TEAM)
+          .replace(cmdName, cmdDesc)
+
+        return this.playerManager.notify(player, cmdDescText)
+      }
+
+      const findedPlayer = this.playerManager.getPlayerByIdOrName(idOrName, player)
+
+      if (!this.playerManager.hasState(findedPlayer, SHARED.STATE.IDLE)) {
+        throw new InvalidArgumentNotify(SHARED.MSG.ERR_PLAYER_IN_ROUND, player, findedPlayer.name)
+      }
+
+      let team = SHARED.TEAMS.ATTACKERS
+      if (teamId === 'def') team = SHARED.TEAMS.DEFENDERS
+      if (teamId === 'spec') team = SHARED.TEAMS.SPECTATORS
+
+      this.playerManager.setPlayerTeam(findedPlayer, team)
+      const { NAME, COLOR } = this.playerManager.dummyConfig.getTeamData(team)
+
+      mp.players.forEach(ppl => {
+        this.playerManager.success(ppl, SHARED.MSG.PLAYER_CHANGED_TEAM, findedPlayer.name, `!{${COLOR}}${NAME}`)
+      })
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }

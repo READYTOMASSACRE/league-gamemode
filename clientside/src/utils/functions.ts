@@ -38,8 +38,11 @@ function keyBind(keys: number[], keyHold: boolean, handler: Function): void {
  * @param {boolean} keyHold  - key state
  * @param {Function} handler 
  */
-function keyUnbind(keys: number[], keyHold: boolean, handler: Function): void {
-  keys.forEach(keycode => mp.keys.unbind(keycode, keyHold, handler))
+function keyUnbind(keys: number[], keyHold: boolean, handler?: Function): void {
+  keys.forEach(keycode => {
+    mp.keys.unbind(keycode, true, handler)
+    mp.keys.unbind(keycode, false, handler)
+  })
 }
 
 /**

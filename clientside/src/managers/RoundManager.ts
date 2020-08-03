@@ -33,8 +33,9 @@ class RoundManager {
     readonly playerManager        : PlayerManager,
     readonly lang                 : DummyLanguageManager,
   ) {
-    this.start = this.start.bind(this)
-    this.end = this.end.bind(this)
+    this.start    = this.start.bind(this)
+    this.end      = this.end.bind(this)
+    this.pause    = this.pause.bind(this)
   }
 
   /**
@@ -44,7 +45,7 @@ class RoundManager {
    * @param {number} mapId - the id of map
    */
   @event(SHARED.EVENTS.SERVER_ROUND_START)
-  start(mapId: number, playerIds: number[]): void {
+  start(mapId: number, playerIds: number[], roundTimeIntervalMs: number): void {
     try {
       const map    = this.dummyMapManager.loadMap(mapId)
       const config = this.dummyConfigManager.dummy
@@ -56,9 +57,8 @@ class RoundManager {
 
       const data = this.getRoundInfoData(map, playerIds)
 
-      this.hudManager.roundInfo.start(data)
+      this.hudManager.roundInfo.start(data, roundTimeIntervalMs)
       this.hudManager.votemapNotify.stop()
-      this.hudManager.notify(this.lang.get(SHARED.MSG.ROUND_START_MESSAGE, map.code))
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -76,7 +76,26 @@ class RoundManager {
       this.zoneManager.stopInspect()
       this.dialogManager.close(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_CLOSE)
       this.hudManager.roundInfo.stop()
-      this.hudManager.notify(this.lang.get(SHARED.MSG.ROUND_STOP_MESSAGE))
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires when the round is paused
+   * @param {boolean} toggle - flag that pause is on/off 
+   */
+  @event(SHARED.EVENTS.SERVER_ROUND_PAUSE)
+  pause(toggle: boolean): void {
+    try {
+      this.playerManager.player.freezePosition(toggle)
+      if (toggle) {
+        this.hudManager.roundInfo.startPause()
+      } else {
+        this.hudManager.roundInfo.stopPause()
+      }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }

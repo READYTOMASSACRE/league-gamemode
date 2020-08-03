@@ -78,7 +78,7 @@ class PlayerManager {
       if (!lang) {
         mp.gui.chat.push(
           this.lang
-            .get(SHARED.MSG.CMD_DESC_CHANGE_LANG)
+            .get(SHARED.MSG.CMD_CHANGE_LANG)
             .replace("{{cmdName}}", cmdDesc)
         )
       } else {

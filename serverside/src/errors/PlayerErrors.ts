@@ -9,6 +9,8 @@ export class PlayerNotifyError extends Error {
 
 export class RoundIsNotRunningError extends PlayerNotifyError {}
 export class RoundIsRunningError extends PlayerNotifyError {}
+export class RoundIsPausedError extends PlayerNotifyError {}
+export class RoundIsNotPausedError extends PlayerNotifyError {}
 
 export class RoundStatGetError extends PlayerNotifyError {}
 export class RoundStatUpdateError extends PlayerNotifyError {}

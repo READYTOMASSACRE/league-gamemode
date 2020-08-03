@@ -4,6 +4,7 @@ import { Config } from "../../core/Config"
 import { WeaponManager } from "../WeaponManager"
 import { getRandomInt } from "../../utils"
 import { IsNotExistsError } from "../../errors/LogErrors"
+import { Application } from "../../core/Application"
 
 /**
  * Class to manage config through the dummy
@@ -32,6 +33,8 @@ class DummyConfigManager implements INTERFACES.Manager {
       ROUND_TIME_INTERVAL   : this.config.get('ROUND_TIME_INTERVAL_MINUTES'),
       VOTE                  : this.config.get('VOTE'),
       HUD                   : this.config.get('HUD'),
+      GAMEMODE              : Application.GAMEMODE,
+      VERSION               : Application.VERSION,
     })
   }
 

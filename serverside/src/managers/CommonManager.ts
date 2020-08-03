@@ -30,12 +30,11 @@ class CommonManager {
    * 
    * Save the player's position
    * @note Command will be deleted in the future
-   * @todo handle command descriptions with languageManager in clientside
    * @param {PlayerMp}
    * @param {string} cmdDesc
    * @param {string} pointName - (optional) name of the point
    */
-  @command('savepos', { desc: SHARED.MSG.CMD_DESC_SAVE_POS })
+  @command('savepos', { desc: SHARED.MSG.CMD_SAVE_POS })
   savePlayerPos(player: PlayerMp, _: string, pointName?: string): void {
     const {x, y, z} = player.position
 

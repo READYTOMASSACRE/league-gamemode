@@ -4,7 +4,7 @@ import { operationFactory } from "../../validators/operationFactory"
 import { logMethod } from "../../utils"
 import { DEBUG } from "../../bootstrap"
 import { RoundStatRepo } from "../repos/RoundStatRepo"
-import { RoundStatGetError, RoundStatUpdateError } from "../../errors/PlayerErrors"
+import { RoundStatGetError, RoundStatUpdateError, NotFoundNotifyError } from "../../errors/PlayerErrors"
 import { IsNotExistsError, InvalidTypeError } from "../../errors/LogErrors"
 
 type RoundIgnoredKeys = 'id' | 'rgscId' | 'win' | 'draw' | 'accuracy'
@@ -23,7 +23,6 @@ class RoundStat {
     damageReceived    : "numberObject",
     shotsFired        : "number",
     shotsHit          : "number",
-    teamId            : "string"
   }
 
   static operations: RoundKeyValueCollection = {
@@ -34,15 +33,15 @@ class RoundStat {
     damageReceived    : "addObject",
     shotsFired        : "add",
     shotsHit          : "add",
-    teamId            : "replace"
   }
 
   constructor(
     public readonly state: SHARED.TYPES.RoundStatDTO,
-  ) {}
+  ) {
+  }
 
   get id(): string {
-    return this.state.timestamp.toString()
+    return this.state.created_at.toString()
   }
 
   /**
@@ -52,9 +51,17 @@ class RoundStat {
    * @throws {RoundStatGetError}
    */
   getPlayerRoundData(player: PlayerMp): SHARED.TYPES.PlayerRoundStatDTO {
-    const dto = this.state.players.find(ppl => ppl.id === player.id)
+    const teamId = player.sharedData.teamId
 
-    if (!dto) throw new RoundStatGetError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    if (teamId === SHARED.TEAMS.SPECTATORS) {
+      throw new RoundStatGetError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    }
+
+    const dto = this.state[teamId].find(ppl => ppl.id === player.id)
+
+    if (!dto) {
+      throw new RoundStatGetError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    }
 
     return dto
   }
@@ -69,12 +76,18 @@ class RoundStat {
     const stateIndex = this.getStateIndex(player)
     const validator = RoundStat.getValidator(key)
 
+    const teamId = player.sharedData.teamId
+
+    if (teamId === SHARED.TEAMS.SPECTATORS) {
+      throw new RoundStatGetError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    }
+
     if (!validator(data)) return false
 
-    this.state.players[stateIndex][key] = data
+    this.state[teamId][stateIndex][key] = data
 
     if (['shotsFired', 'shotsHit'].indexOf(key) !== -1) {
-      this.state.players[stateIndex]["accuracy"] = RoundStat.calculateAccuracy(this.state.players[stateIndex])
+      this.state[teamId][stateIndex]["accuracy"] = RoundStat.calculateAccuracy(this.state[teamId][stateIndex])
     }
 
     return true
@@ -91,13 +104,19 @@ class RoundStat {
     const stateIndex = this.getStateIndex(player)
     const validator = RoundStat.getValidator(key)
 
+    const teamId = player.sharedData.teamId
+
+    if (teamId === SHARED.TEAMS.SPECTATORS) {
+      throw new RoundStatGetError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    }
+
     if (!validator(data)) return false
 
     const updateOperation = RoundStat.getOperation(key)
-    this.state.players[stateIndex][key] = updateOperation(this.state.players[stateIndex][key], data)
+    this.state[teamId][stateIndex][key] = updateOperation(this.state[teamId][stateIndex][key], data)
     
     if (['shotsFired', 'shotsHit'].indexOf(key) !== -1) {
-      this.state.players[stateIndex]["accuracy"] = RoundStat.calculateAccuracy(this.state.players[stateIndex])
+      this.state[teamId][stateIndex]["accuracy"] = RoundStat.calculateAccuracy(this.state[teamId][stateIndex])
     }
 
     return true
@@ -105,23 +124,84 @@ class RoundStat {
 
   /**
    * Set team winners
-   * @param {SHARED.TEAMS | false} winner 
+   * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false} winner 
    */
-  setWinners(winner: SHARED.TEAMS | false): boolean {
-    this.state.players.forEach((playerDto, index) => {
-      const player = mp.players.at(playerDto.id)
-
-      if (player) {
-        if (winner === false) {
-          playerDto.draw = true
-        } else {
-          playerDto.win = playerDto.teamId === winner
-        }
-        this.state.players[index] = playerDto
-      }
-    })
+  setWinner(winner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): boolean {
+    this.state.winner = winner
 
     return true
+  }
+
+  /**
+   * Check if round is draw
+   */
+  isDraw(): boolean {
+    return this.state.winner === false
+  }
+
+  /**
+   * Check if player is winner
+   * @param {PlayerMp} player 
+   */
+  isPlayerWinner(player: PlayerMp): boolean {
+    if (!this.state.winner) return false
+
+    const [teamId] = this.getPlayerTeam(player)
+
+    return teamId === this.state.winner
+  }
+
+  /**
+   * Get player's team
+   * @param {PlayerMp} player 
+   */
+  getPlayerTeam(player: PlayerMp): [SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS, number] {
+    const attIndex = this.getAttackerIndex(player)
+    const defIndex = this.getDefenderIndex(player)
+
+    if (attIndex === -1 && defIndex === -1) {
+      throw new NotFoundNotifyError(SHARED.MSG.ERR_ROUND_PLAYER_NOT_FOUND, player)
+    }
+
+    return attIndex === -1
+      ? [SHARED.TEAMS.DEFENDERS, defIndex]
+      : [SHARED.TEAMS.ATTACKERS, attIndex]
+  }
+
+  /**
+   * Get player's round statistic
+   * @param {PlayerMp} player 
+   */
+  getPlayerRoundStat(player: PlayerMp): SHARED.TYPES.PlayerRoundStatDTO {
+    const [teamId, playerIndex] = this.getPlayerTeam(player)
+
+    return this.state[teamId][playerIndex]
+  }
+
+  /**
+   * Check if player is in round as attacker
+   * @param player 
+   */
+  getAttackerIndex(player: PlayerMp): number {
+    return this.state.ATTACKERS.findIndex(ppl => ppl.rgscId === player.rgscId)
+  }
+
+  /**
+   * Check if player is in round as defender
+   * @param player 
+   */
+  getDefenderIndex(player: PlayerMp): number {
+    return this.state.DEFENDERS.findIndex(ppl => ppl.rgscId === player.rgscId)
+  }
+
+  /**
+   * Get player's KDA
+   * @param {PlayerMp} player 
+   */
+  getPlayerKDA(player: PlayerMp): [number, number, number] {
+    const { kill, death, assist } = this.getPlayerRoundStat(player)
+
+    return [ kill, death, assist ]
   }
 
   /**
@@ -142,9 +222,17 @@ class RoundStat {
    * @throws {RoundStatUpdateError}
    */
   private getStateIndex(player: PlayerMp): number {
-    const stateIndex = this.state.players.findIndex(ppl => ppl.id === player.id)
+    const teamId = player.sharedData.teamId
 
-    if (stateIndex === -1) throw new RoundStatUpdateError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    if (teamId === SHARED.TEAMS.SPECTATORS) {
+      throw new RoundStatUpdateError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    }
+
+    const stateIndex = this.state[teamId].findIndex(ppl => ppl.id === player.id)
+
+    if (stateIndex === -1) {
+      throw new RoundStatUpdateError(SHARED.MSG.ERR_WRONG_PLAYER_ID, player)
+    }
 
     return stateIndex
   }
@@ -198,19 +286,44 @@ class RoundStat {
    * @param {PlayerMp[]} players (optional)
    */
   static create(startDate?: number, players: PlayerMp[] = []): RoundStat {
-    const dto: SHARED.TYPES.RoundStatDTO = {
-      timestamp: startDate || Date.now(),
-      players: players.map(player => {
-        const dto   = RoundStat.getDefault()
-        dto.id      = player.id
-        dto.rgscId  = player.rgscId
-        dto.teamId  = player.sharedData.teamId
+    const [attackers, defenders] = RoundStat.preparePlayers(players)
 
-        return dto
-      })
+    const dto: SHARED.TYPES.RoundStatDTO = {
+      created_at: startDate || Date.now(),
+      winner: false,
+      ATTACKERS: attackers,
+      DEFENDERS: defenders,
     }
 
     return DomainConverter.fromDto(RoundStat, dto)
+  }
+
+  /**
+   * Prepare players dto objects
+   * @param {PlayerMp[]} players 
+   */
+  static preparePlayers(players: PlayerMp[]): [SHARED.TYPES.PlayerRoundStatDTO[], SHARED.TYPES.PlayerRoundStatDTO[]] {
+    const attackers = players
+      .filter(player => player.sharedData.teamId === SHARED.TEAMS.ATTACKERS)
+      .map(player => {
+        const dto   = RoundStat.getDefault()
+        dto.id      = player.id
+        dto.rgscId  = player.rgscId
+
+        return dto
+      })
+
+    const defenders = players
+      .filter(player => player.sharedData.teamId === SHARED.TEAMS.DEFENDERS)
+      .map(player => {
+        const dto   = RoundStat.getDefault()
+        dto.id      = player.id
+        dto.rgscId  = player.rgscId
+
+        return dto
+      })
+
+    return [attackers, defenders]
   }
 
   /**
@@ -220,7 +333,6 @@ class RoundStat {
     return {
       id                : 0,
       rgscId            : "",
-      win               : false,
       kill              : 0,
       death             : 0,
       assist            : 0,
@@ -229,8 +341,6 @@ class RoundStat {
       shotsFired        : 0,
       shotsHit          : 0,
       accuracy          : 0,
-      teamId            : SHARED.TEAMS.ATTACKERS,
-      draw              : false,
     }
   }
 

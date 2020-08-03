@@ -12,17 +12,19 @@ declare namespace ENUMS {
    * An enum of keycodes
    */
   const enum KEYCODES {
-    VK_LEFT = 0x25,
-    VK_UP = 0x26,
-    VK_RIGHT = 0x27,
-    VK_DOWN = 0x28,
+    VK_LEFT   = 0x25,
+    VK_UP     = 0x26,
+    VK_RIGHT  = 0x27,
+    VK_DOWN   = 0x28,
     VK_RETURN = 0x0D,
-    W = 0x57,
-    A = 0x41,
-    S = 0x53,
-    D = 0x44,
-    VK_F4 = 0x73,
-    VK_TILDE = 0xC0,
+    W         = 0x57,
+    A         = 0x41,
+    S         = 0x53,
+    D         = 0x44,
+    VK_F2     = 0x71,
+    VK_F3     = 0x72,
+    VK_F4     = 0x73,
+    VK_TILDE  = 0xC0,
   }
 
   const enum BONES {

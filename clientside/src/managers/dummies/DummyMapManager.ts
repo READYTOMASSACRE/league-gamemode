@@ -1,8 +1,10 @@
 import { singleton, injectable } from "tsyringe";
 import { Dummy } from "../../entities/Dummy";
-import { Vector2, logbrowser } from "../../utils";
+import { Vector2, print } from "../../utils";
 import { NotFoundNotifyError } from "../../errors/PlayerErrors";
 import { DummyLanguageManager } from "./DummyLanguageManager";
+
+export type MapInfo = Pick<TYPES.GameMap, 'id' | 'code'>
 
 /**
  * Class to manage maps through the dummies
@@ -13,7 +15,27 @@ class DummyMapManager {
   private readonly type = SHARED.ENTITIES.MAP
   private readonly dummies: Dummy<SHARED.ENTITIES.MAP>[] = []
 
-  constructor(readonly lang: DummyLanguageManager) {}
+  constructor(readonly lang: DummyLanguageManager) {
+    this.cefVoteRequest = this.cefVoteRequest.bind(this)
+  }
+
+  /**
+   * RPC Call
+   * 
+   * Format maps for CEF request
+   */
+  cefVoteRequest(): { maps: MapInfo[]} {
+    const maps: MapInfo[] = []
+    this.dummies.forEach(dummy => {
+      maps.push({
+        id: dummy.data.id,
+        code: dummy.data.code,
+      })
+    })
+
+    return { maps }
+  }
+
   /**
    * Register all existing dummies
    */
@@ -29,8 +51,6 @@ class DummyMapManager {
    */
   loadMap(mapIdOrCode: number | string): TYPES.GameMap {
     const map = this.dummies.find(dummyMap => dummyMap.data.id === +mapIdOrCode || dummyMap.data.code === mapIdOrCode)
-
-    logbrowser(this.dummies, map)
 
     if (!map) {
       throw new NotFoundNotifyError(this.lang.get(SHARED.MSG.ERR_MAP_NOT_FOUND))

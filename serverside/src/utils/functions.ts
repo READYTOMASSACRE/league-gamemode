@@ -101,4 +101,23 @@ function isNumber(n: string) {
   return !isNaN(parseFloat(n)) && !isNaN(+n - 0)
 }
 
-export { getRandomInt, getProjectDir, getSrcDir, getJsonFromFileSync, logWrapper, getFormattedCurrentTime, keys, hash256, escapeRegExp, isNumber }
+function formatDate(d: number, lang: string = 'en') {
+  const date = new Date(d)
+  const dateTimeFormat = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short', day: '2-digit', hour: 'numeric', minute: 'numeric', second: 'numeric' })
+
+  return dateTimeFormat.format(date)
+}
+
+export {
+  getRandomInt,
+  getProjectDir,
+  getSrcDir,
+  getJsonFromFileSync,
+  logWrapper,
+  getFormattedCurrentTime,
+  keys,
+  hash256,
+  escapeRegExp,
+  isNumber,
+  formatDate
+}

@@ -1,7 +1,15 @@
 export enum MSG {
-  CMD_DESC_SAVE_POS                 = "CMD_DESC_SAVE_POS",
-  CMD_DESC_VOTE                     = "CMD_DESC_VOTE",
-  CMD_DESC_CHANGE_LANG              = "CMD_DESC_CHANGE_LANG",
+  CMD_SAVE_POS                      = "CMD_SAVE_POS",
+  CMD_VOTE                          = "CMD_VOTE",
+  CMD_CHANGE_LANG                   = "CMD_CHANGE_LANG",
+  CMD_ADD_TO_ROUND                  = "CMD_ADD_TO_ROUND",
+  CMD_REMOVE_FROM_ROUND             = "CMD_REMOVE_FROM_ROUND",
+  CMD_KICK                          = "CMD_KICK",
+  CMD_MUTE                          = "CMD_MUTE",
+  CMD_UNMUTE                        = "CMD_UNMUTE",
+  CMD_CHANGE_TEAM                   = "CMD_CHANGE_TEAM",
+  CMD_ROUND_START                   = "CMD_ROUND_START",
+  CMD_ROUND_END                     = "CMD_ROUND_END",
 
   PAGE_SHOW_CMD                     = "PAGE_SHOW_CMD",
 
@@ -19,10 +27,14 @@ export enum MSG {
 
   ERR_NOT_FOUND                     = "ERR_NOT_FOUND",
   ERR_MAP_NOT_FOUND                 = "ERR_MAP_NOT_FOUND",
+  ERR_PLAYER_NOT_FOUND              = 'ERR_PLAYER_NOT_FOUND',
   ERR_WEAPON_NOT_FOUND              = "ERR_WEAPON_NOT_FOUND",
   ERR_LANG_NOT_FOUND                = "ERR_LANG_NOT_FOUND",
   ERR_TOO_MANY_MAPS                 = "ERR_TOO_MANY_MAPS",
+  ERR_TOO_MANY_PLAYERS              = 'ERR_TOO_MANY_PLAYERS',
   ERR_WRONG_TYPE                    = "ERR_WRONG_TYPE",
+  ERR_PROFILE_NOT_FOUND             = "ERR_PROFILE_NOT_FOUND",
+  ERR_ROUND_PLAYER_NOT_FOUND        = "ERR_ROUND_PLAYER_NOT_FOUND",
 
   ERR_PLAYER_HAS_ALREADY_VOTED      = "ERR_PLAYER_HAS_ALREADY_VOTED",
 
@@ -31,8 +43,16 @@ export enum MSG {
 
   ERR_ROUND_IS_NOT_RUNNING          = "ERR_ROUND_IS_NOT_RUNNING",
   ERR_ROUND_IS_RUNNING              = "ERR_ROUND_IS_RUNNING",
+  ERR_ROUND_IS_PAUSED               = "ERR_ROUND_IS_PAUSED",
+  ERR_ROUND_IS_UNPAUSED             = "ERR_ROUND_IS_UNPAUSED",
+  ERR_PLAYER_IN_ROUND               = "ERR_PLAYER_IN_ROUND",
+  ERR_PLAYER_NOT_IN_ROUND           = "ERR_PLAYER_NOT_IN_ROUND",
+
   TEAM_SELECTOR_CHANGE              = "TEAM_SELECTOR_CHANGE",
   TEAM_SELECTOR_CHANGE_CANCEL       = "TEAM_SELECTOR_CHANGE_CANCEL",
+  TEAM_SELECTOR_CHANGE_TEAM         = "TEAM_SELECTOR_CHANGE_TEAM",
+  TEAM_SELECTOR_CHANGE_SKIN         = "TEAM_SELECTOR_CHANGE_SKIN",
+  TEAM_SELECTOR_SUBMIT              = "TEAM_SELECTOR_SUBMIT",
 
   KILL                              = "KILL",
   DEATH                             = "DEATH",
@@ -47,8 +67,64 @@ export enum MSG {
   ALIVE                             = "ALIVE",
   DEAD                              = "DEAD",
 
+  CONTROL                           = "CONTROL",
+  CONTROL_SCOREBOARD                = "CONTROL_SCOREBOARD",
+  CONTROL_GAMEMENU                  = "CONTROL_GAMEMENU",
+  CONTROL_TEAMCHANGE                = "CONTROL_TEAMCHANGE",
+
   SCOREBOARD_PLAYERS                = "SCOREBOARD_PLAYERS",
   TIME_REMAINING                    = "TIME_REMAINING",
   VOTEMAP_NOTIFY                    = "VOTEMAP_NOTIFY",
   WEAPON_CHOOSE_TEXT                = "WEAPON_CHOOSE_TEXT",
+
+  ROUND_START_MESSAGE               = "ROUND_START_MESSAGE",
+  ROUND_STOP_MESSAGE                = "ROUND_STOP_MESSAGE",
+  ROUND_PAUSED_MESSAGE              = "ROUND_PAUSED_MESSAGE",
+  ROUND_ADD_TO_ROUND_SUCCESS        = "ROUND_ADD_TO_ROUND_SUCCESS",
+  ROUND_REMOVE_FROM_ROUND_SUCCESS   = "ROUND_REMOVE_FROM_ROUND_SUCCESS",
+
+  GROUP_LOGIN_SUCCESS               = "GROUP_LOGIN_SUCCESS",
+  GROUP_LOGIN_FAILURE               = "GROUP_LOGIN_FAILURE",
+  GROUP_LOGIN_INVALID               = "GROUP_LOGIN_INVALID",
+  GROUP_LOGGED_ALREADY              = "GROUP_LOGGED_ALREADY",
+  GROUP_ERR_WRONG_ACCESS            = "GROUP_ERR_WRONG_ACCESS",
+  GROUP_ERR_SIMILAR_GROUP           = "GROUP_ERR_SIMILAR_GROUP",
+  GROUP_ROOT                        = "GROUP_ROOT",
+  GROUP_ADMIN                       = "GROUP_ADMIN",
+  GROUP_MODERATOR                   = "GROUP_MODERATOR",
+  GROUP_USER                        = "GROUP_USER",
+  GROUP_ADD_SUCCESS                 = "GROUP_ADD_SUCCESS",
+  GROUP_ADD_SUCCESS_SELF            = "GROUP_ADD_SUCCESS_SELF",
+  GROUP_PASSWORD_CHANGED            = "GROUP_PASSWORD_CHANGED",
+
+  PLAYER_KICKED                     = "PLAYER_KICKED",
+  PLAYER_MUTED                      = "PLAYER_MUTED",
+  PLAYER_UNMUTED                    = "PLAYER_UNMUTED",
+  PLAYER_IS_MUTED                   = "PLAYER_IS_MUTED",
+  PLAYER_CHANGED_TEAM               = "PLAYER_CHANGED_TEAM",
+  PLAYER_JOINED                     = "PLAYER_JOINED",
+  PLAYER_LEFT                       = "PLAYER_LEFT",
+  REASON_NULL                       = "REASON_NULL",
+
+  GAMEMENU_PROFILE                  = "GAMEMENU_PROFILE",
+  GAMEMENU_PROFILE_TITLE            = "GAMEMENU_PROFILE_TITLE",
+
+  GAMEMENU_PLAYERS                  = "GAMEMENU_PLAYERS",
+  GAMEMENU_PLAYERS_TD_ID            = "GAMEMENU_PLAYERS_TD_ID",
+  GAMEMENU_PLAYERS_TD_NAME          = "GAMEMENU_PLAYERS_TD_NAME",
+  GAMEMENU_PLAYERS_TD_MMR           = "GAMEMENU_PLAYERS_TD_MMR",
+  GAMEMENU_PLAYERS_TD_ACTIONS       = "GAMEMENU_PLAYERS_TD_ACTIONS",
+
+  GAMEMENU_HISTORY                  = "GAMEMENU_HISTORY",
+  GAMEMENU_HISTORY_TD_RESULT        = "GAMEMENU_HISTORY_TD_RESULT",
+  GAMEMENU_HISTORY_TD_DATE          = "GAMEMENU_HISTORY_TD_DATE",
+  GAMEMENU_HISTORY_TD_KDA           = "GAMEMENU_HISTORY_TD_KDA",
+
+  GAMEMENU_VOTE                     = "GAMEMENU_VOTE",
+  GAMEMENU_VOTE_LABEL               = "GAMEMENU_VOTE_LABEL",
+  GAMEMENU_VOTE_PLACEHOLDER         = "GAMEMENU_VOTE_PLACEHOLDER",
+  GAMEMENU_VOTE_NOMINATE            = "GAMEMENU_VOTE_NOMINATE",
+
+  GAMEMENU_TOP                      = "GAMEMENU_TOP",
+  GAMEMENU_CREDITS                  = "GAMEMENU_CREDITS",
 }

@@ -1,9 +1,14 @@
 import { DomainConverter } from "./DomainConverter"
 import { PlayerProfileRepo } from "../repos/PlayerProfileRepo"
 import { PlayerStatUpdateError, InvalidLoginGroup } from "../../errors/PlayerErrors"
-import { hash256 } from "../../utils"
+import { hash256, formatDate } from "../../utils"
 
 const MINUTE = 1000 * 60
+
+export type CEFProfileDTO = Exclude<SHARED.TYPES.PlayerProfileDTO, 'rgscId' | 'group' | 'password' | 'previousNames' | 'registered'> | {
+  previousNames: string
+  registered: string
+}
 
 export type USER_GROUPS = Exclude<SHARED.GROUP, SHARED.GROUP.ROOT>
 /**
@@ -52,21 +57,34 @@ class PlayerProfile {
     this.state.shotsHit   += data.shotsHit
     this.state.accuracy   = this.getAccuracy()
 
-    if (data.win) {
-      this.state.wins     += 1
-      this.state.exp      += PlayerProfile.EXP_GAIN * 2
-      this.state.mmr      += PlayerProfile.MMR_GAIN
-    } else if(data.draw) {
-      this.state.draws    += 1
-      this.state.exp      += PlayerProfile.EXP_GAIN
-    } else {
-      this.state.losses   += 1
-      this.state.exp      += PlayerProfile.EXP_GAIN
-      this.state.mmr      -= PlayerProfile.MMR_GAIN
-      if (this.state.mmr < 0) this.state.mmr = 0
-    }
-
     this.updateTimePlayed(data.id)
+  }
+
+  /**
+   * Set win
+   */
+  setWin(): void {
+    this.state.wins     += 1
+    this.state.exp      += PlayerProfile.EXP_GAIN * 2
+    this.state.mmr      += PlayerProfile.MMR_GAIN
+  }
+
+  /**
+   * Set lose
+   */
+  setLose(): void {
+    this.state.losses   += 1
+    this.state.exp      += PlayerProfile.EXP_GAIN
+    this.state.mmr      -= PlayerProfile.MMR_GAIN
+    if (this.state.mmr < 0) this.state.mmr = 0
+  }
+
+  /**
+   * Set draw
+   */
+  setDraw(): void {
+    this.state.draws    += 1
+    this.state.exp      += PlayerProfile.EXP_GAIN
   }
 
   /**
@@ -136,6 +154,31 @@ class PlayerProfile {
       && player.playingTime
     ) {
       this.state.timePlayed += this.calculatePlayingTime(player)
+    }
+  }
+
+  /**
+   * Get CEF profile
+   */
+  toCefProfileDto(lang: string = 'en'): CEFProfileDTO {
+    return {
+      name          : this.state.name,
+      registered    : formatDate(this.state.registered, lang),
+      previousNames : this.state.previousNames.join(','),
+      timePlayed    : this.state.timePlayed,
+      matches       : this.state.matches,
+      wins          : this.state.wins,
+      losses        : this.state.losses,
+      kill          : this.state.kill,
+      death         : this.state.death,
+      assist        : this.state.assist,
+      shotsFired    : this.state.shotsFired,
+      shotsHit      : this.state.shotsHit,
+      accuracy      : this.state.accuracy,
+      mmr           : this.state.mmr,
+      exp           : this.state.exp,
+      lvl           : this.state.lvl,
+      draws         : this.state.draws,
     }
   }
 

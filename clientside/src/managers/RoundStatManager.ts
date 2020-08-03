@@ -1,6 +1,7 @@
 import { eventable, event } from "rage-decorators"
 import { singleton, autoInjectable } from "tsyringe"
 import { PlayerManager } from "./PlayerManager"
+import { ErrorHandler } from "../core/ErrorHandler"
 
 /**
  * Class to manage the round stats
@@ -12,7 +13,8 @@ class RoundStatManager {
   private player = mp.players.local
 
   constructor(
-    private readonly playerManager: PlayerManager
+    readonly playerManager    : PlayerManager,
+    readonly errHandler       : ErrorHandler
   ) {
     this.outcomingDamage    = this.outcomingDamage.bind(this)
     this.incomingDamage     = this.incomingDamage.bind(this)
@@ -34,15 +36,19 @@ class RoundStatManager {
    */
   @event(RageEnums.EventKey.OUTGOING_DAMAGE)
   outcomingDamage(sourceEntity: PlayerMp, targetEntity: PlayerMp, targetPlayer: PlayerMp, weapon: number, boneIndex: number, damage: number): boolean | void {
-    if (
-      this.playerManager.hasState(SHARED.STATE.ALIVE)
-      && targetPlayer
-      && this.playerManager.hasState(SHARED.STATE.ALIVE, targetPlayer)
-    ) {
-      if (this.sameTeam(targetPlayer)) return true
-
-      this.addDamage(weapon, damage)
-      this.addShotsHit()
+    try {
+      if (
+        this.playerManager.hasState(SHARED.STATE.ALIVE)
+        && targetPlayer
+        && this.playerManager.hasState(SHARED.STATE.ALIVE, targetPlayer)
+      ) {
+        if (this.sameTeam(targetPlayer)) return true
+  
+        this.addDamage(weapon, damage)
+        this.addShotsHit()
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
     }
   }
 
@@ -60,15 +66,19 @@ class RoundStatManager {
    */
   @event(RageEnums.EventKey.INCOMING_DAMAGE)
   incomingDamage(sourceEntity: PlayerMp, targetEntity: PlayerMp, targetPlayer: PlayerMp, weapon: number, boneIndex: number, damage: number): boolean | void {
-    if (
-      this.playerManager.hasState(SHARED.STATE.ALIVE)
-      && sourceEntity.type === "player"
-      && this.playerManager.hasState(SHARED.STATE.ALIVE, sourceEntity)
-    ) {
-      if (this.sameTeam(sourceEntity)) return true
-      
-      this.addAssist(sourceEntity)
-      this.addDamageReceived(weapon, damage)
+    try {
+      if (
+        this.playerManager.hasState(SHARED.STATE.ALIVE)
+        && sourceEntity.type === "player"
+        && this.playerManager.hasState(SHARED.STATE.ALIVE, sourceEntity)
+      ) {
+        if (this.sameTeam(sourceEntity)) return true
+        
+        this.addAssist(sourceEntity)
+        this.addDamageReceived(weapon, damage)
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
     }
   }
 
@@ -82,15 +92,20 @@ class RoundStatManager {
    * @param killer 
    */
   @event(RageEnums.EventKey.PLAYER_DEATH)
-  playerDeath(player: PlayerMp, reason: number, killer: PlayerMp): void {
-    if (
-      this.playerManager.hasState([SHARED.STATE.ALIVE, SHARED.STATE.DEAD])
-      && this.playerManager.hasState([SHARED.STATE.ALIVE], killer)
-      && this.player.customData.assist
-    ) {
-      if (this.player.customData.assist[killer.remoteId]) delete this.player.customData.assist[killer.remoteId]
-
-      mp.events.callRemote(SHARED.EVENTS.CLIENT_ASSIST_UPDATE, JSON.stringify(this.player.customData.assist))
+  playerDeath(player: PlayerMp, reason: number, killer?: PlayerMp): void {
+    try {
+      if (
+        this.playerManager.hasState([SHARED.STATE.ALIVE, SHARED.STATE.DEAD])
+        && this.playerManager.hasState([SHARED.STATE.ALIVE], killer)
+        && this.player.customData.assist
+        && killer
+      ) {
+        if (this.player.customData.assist[killer.remoteId]) delete this.player.customData.assist[killer.remoteId]
+    
+        mp.events.callRemote(SHARED.EVENTS.CLIENT_ASSIST_UPDATE, JSON.stringify(this.player.customData.assist))
+      }
+    } catch (err) {
+      if (this.errHandler.handle(err)) throw err
     }
   }
 
@@ -104,8 +119,12 @@ class RoundStatManager {
    */
   @event(RageEnums.EventKey.PLAYER_WEAPON_SHOT)
   playerWeaponShot<E extends EntityMp>(targetPosition: Vector3Mp, targetEntity: E): void {
-    if (this.playerManager.hasState([SHARED.STATE.ALIVE])) {
-      this.addShotsFired()
+    try {
+      if (this.playerManager.hasState([SHARED.STATE.ALIVE])) {
+        this.addShotsFired()
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
     }
   }
 

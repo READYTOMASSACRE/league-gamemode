@@ -4,47 +4,52 @@ declare namespace SHARED {
      * ================ SERVER-SIDE EVENTS ================
      */
     /** This event is invoked by serverside to draw a zone on minimap on clientside */
-    SERVER_MAP_DRAW             = 'map.draw',
+    SERVER_MAP_DRAW               = 'map.draw',
     /** This event is invoked by serverside to stop drawing a zone on minimap on clientside */
-    SERVER_MAP_CLEAR            = 'map.clear',
+    SERVER_MAP_CLEAR              = 'map.clear',
     /** This event is invoked by serverside when round starts */
-    SERVER_ROUND_START          = 'round.start',
+    SERVER_ROUND_START            = 'round.start',
     /** This event is invoked by serverside when round ends */
-    SERVER_ROUND_END            = 'round.end',
+    SERVER_ROUND_END              = 'round.end',
+    /** This event is invoked by serverside when round is paused or unpaused */
+    SERVER_ROUND_PAUSE            = 'round.pause',
     /** This event is invoked by serverside when the player is ready to play */
-    SERVER_PLAYER_READY         = 'player.ready',
+    SERVER_PLAYER_READY           = 'player.ready',
     /** This event is invoked by serverside when the player should logIn */
-    SERVER_PLAYER_LOGIN         = 'player.login',
+    SERVER_PLAYER_LOGIN           = 'player.login',
     /** This event is invoked by serverside when the player should logIn */
-    SERVER_PLAYER_LOGIN_SUCCESS = 'player.login.success',
+    SERVER_PLAYER_LOGIN_SUCCESS   = 'player.login.success',
     /** This event is invoked by serverside when the player should logIn */
-    SERVER_PLAYER_LOGIN_FAILURE = 'player.login.failure',
+    SERVER_PLAYER_LOGIN_FAILURE   = 'player.login.failure',
     /** This event is invoked by serverside to notify player */
-    SERVER_NOTIFY               = 'player.notify',
+    SERVER_NOTIFY                 = 'player.notify',
+    /** This event is invoked by serverside to notify player */
+    SERVER_NOTIFY_CHAT            = 'player.notify.chat',
     /** This event is invoked by serverside to notify player errors */
-    SERVER_NOTIFY_ERROR         = 'player.notify.error',
+    SERVER_NOTIFY_ERROR           = 'player.notify.error',
     /** This event is invoked by serverside to notify player that vote has started */
-    SERVER_VOTEMAP_START        = 'votemap.start',
+    SERVER_VOTEMAP_START          = 'votemap.start',
     /** This event is invoked by serverside to update state of nominated maps */
-    SERVER_VOTEMAP_UPDATE       = 'votemap.update',
-    
+    SERVER_VOTEMAP_UPDATE         = 'votemap.update',
+    /** This event is invoked by serverside to add a new deathlog */
+    SERVER_DEATHLOG               = 'server.deathlog',
     /**
      * ================ CLIENT-SIDE EVENTS ================
      */
     /** This event is invoked by clientside to change shared data on server */
-    CLIENT_SET_SHARED_DATA      = 'sharedData.set',
+    CLIENT_SET_SHARED_DATA        = 'sharedData.set',
     /** This event is invoked by clientside to change player data on server */
-    CLIENT_SET_PLAYER_DATA      = 'playerData.set',
+    CLIENT_SET_PLAYER_DATA        = 'playerData.set',
     /** This event is invoked by clientside when the all dummies are registred */
-    CLIENT_DUMMIES_READY        = 'dummies.ready',
+    CLIENT_DUMMIES_READY          = 'dummies.ready',
     /** This event is invoked by clientside to spawn in lobby */
-    CLIENT_SPAWN_IN_LOBBY       = 'spawn.lobby',
+    CLIENT_SPAWN_IN_LOBBY         = 'spawn.lobby',
     /** This event is invoked by clientside to update round stat*/
-    CLIENT_ROUND_STAT_UPDATE    = 'roundstat.update',
+    CLIENT_ROUND_STAT_UPDATE      = 'roundstat.update',
     /** This event is invoked by clientside to update round stat assist */
-    CLIENT_ASSIST_UPDATE        = 'roundstat.update.assist',
+    CLIENT_ASSIST_UPDATE          = 'roundstat.update.assist',
     /** This event is invoked by clientside when client browser is ready */
-    CLIENT_BROWSER_READY        = 'browser.ready',
+    CLIENT_BROWSER_READY          = 'browser.ready',
     /**
     * ================= SHARED EVENTS =================
     */
@@ -57,35 +62,54 @@ declare namespace SHARED {
     
   const enum RPC {
     /** This event is invoked by clientside to give player weapons */
-    CLIENT_WEAPON_REQUEST             = 'CEF.weaponDialog.request',
+    CLIENT_WEAPON_REQUEST         = 'CEF.weaponDialog.request',
     /** This event is invoked by clientside to pass params into CEF console.log */
-    CLIENT_CONSOLE                    = 'CEF.console',
+    CLIENT_CONSOLE                = 'CEF.console',
     /** This event is invoked by clientside to set up the new language */
-    CLIENT_LANGUAGE                   = 'CEF.language',
+    CLIENT_LANGUAGE               = 'CEF.language',
     /** This event is invoked by clientside to set up new scoreboard data */
-    CLIENT_SCOREBOARD_DATA            = 'CEF.scoreboard.data',
+    CLIENT_SCOREBOARD_DATA        = 'CEF.scoreboard.data',
     /** This event is invoked by clientside to getting ping players */
-    CLIENT_PING_REQUEST               = 'ping.request',
+    CLIENT_PING_REQUEST           = 'ping.request',
     /** This event is invoked by clientside to set up new infopanel data */
-    CLIENT_INFOPANEL_DATA             = 'CEF.infopanel.data',
+    CLIENT_INFOPANEL_DATA         = 'CEF.infopanel.data',
+    /** This event is invoked by clientside to CEF to add a new deathlog */
+    CLIENT_DEATHLOG               = 'client.deathlog',
+
+    /** This event is invoked by cef to request a player's profile */
+    CEF_GAMEMENU_PROFILE          = 'CEF.gamemenu.profile',
+    /** This event is invoked by cef to request players */
+    CEF_GAMEMENU_PLAYERS          = 'CEF.gamemenu.players',
+    /** This event is invoked by cef to request a players history */
+    CEF_GAMEMENU_HISTORY          = 'CEF.gamemenu.history',
+    /** This event is invoked by cef to request maps */
+    CEF_GAMEMENU_VOTE             = 'CEF.gamemenu.vote',
+    /** This event is invoked by cef to nominate a map */
+    CEF_GAMEMENU_VOTE_NOMINATE    = 'CEF.gamemenu.vote.nominate',
+    /** This event is invoked by cef to request a top of players */
+    CEF_GAMEMENU_TOP              = 'CEF.gamemenu.top',
+    /** This event is invoked by cef to request credits info */
+    CEF_GAMEMENU_CREDITS          = 'CEF.gamemenu.credits',
   }
 
   /** @todo change CLIENT to CEF for cef call rpcs */
   const enum RPC_DIALOG {
     /** This event invokes when the dialog is opened */
-    CLIENT_DIALOG_OPEN                = 'CEF.dialog.open',
+    CLIENT_DIALOG_OPEN            = 'CEF.dialog.open',
     /** This event invokes when the dialog is closed */
-    CLIENT_DIALOG_CLOSE               = 'CEF.dialog.close',
+    CLIENT_DIALOG_CLOSE           = 'CEF.dialog.close',
     /** This event is invoked by clientside when the client should render a weapon dialog */
-    CLIENT_WEAPON_DIALOG_OPEN         = 'CEF.weaponDialog.open',
+    CLIENT_WEAPON_DIALOG_OPEN     = 'CEF.weaponDialog.open',
     /** This event is invoked by clientside when the client should stop render a weapon dialog */
-    CLIENT_WEAPON_DIALOG_CLOSE        = 'CEF.weaponDialog.close',
+    CLIENT_WEAPON_DIALOG_CLOSE    = 'CEF.weaponDialog.close',
     /** This event is invoked by clientside when the client should or should stop render a scoreboard dialog */
-    CLIENT_SCOREBOARD_TOGGLE          = 'CEF.scoreboard.toggle',
+    CLIENT_SCOREBOARD_TOGGLE      = 'CEF.scoreboard.toggle',
     /** This event is invoked by clientside when the client should or should stop render a top info panel */
-    CLIENT_INFOPANEL_TOGGLE           = 'CEF.infopanel.toggle',
+    CLIENT_INFOPANEL_TOGGLE       = 'CEF.infopanel.toggle',
     /** This event is invoked by clientside to send a mesage into cef */
-    CLIENT_NOTIFY_NOTISTACK           = 'CEF.notify.notistack',
+    CLIENT_NOTIFY_NOTISTACK       = 'CEF.notify.notistack',
+    /** This event is invoked by clientside when the client is toggling gamemenu */
+    CLIENT_GAMEMENU_TOGGLE        = 'CEF.gamemenu.toggle',
   }
 
   
@@ -219,6 +243,8 @@ declare namespace SHARED {
         TIME                    : number
       }
       HUD                       : HudConfig
+      GAMEMODE                  : string
+      VERSION                   : string
     }
 
     type DummyTypes = {
@@ -240,8 +266,6 @@ declare namespace SHARED {
     type PlayerRoundStatDTO = {
       id                        : number
       rgscId                    : string
-      win                       : boolean
-      draw                      : boolean
       kill                      : number
       death                     : number
       assist                    : number
@@ -252,12 +276,13 @@ declare namespace SHARED {
       shotsFired                : number
       shotsHit                  : number
       accuracy                  : number
-      teamId                    : TEAMS
     }
   
     type RoundStatDTO = {
-      timestamp                 : number
-      players                   : PlayerRoundStatDTO[]
+      created_at                : number
+      winner                    : SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false
+      [SHARED.TEAMS.ATTACKERS]  : PlayerRoundStatDTO[]
+      [SHARED.TEAMS.DEFENDERS]  : PlayerRoundStatDTO[]
     }
 
     type RoundStatDummyDTO = {
@@ -314,9 +339,17 @@ declare namespace SHARED {
   }
 
   const enum MSG {
-    CMD_DESC_SAVE_POS                 = "CMD_DESC_SAVE_POS",
-    CMD_DESC_VOTE                     = "CMD_DESC_VOTE",
-    CMD_DESC_CHANGE_LANG              = "CMD_DESC_CHANGE_LANG",
+    CMD_SAVE_POS                      = "CMD_SAVE_POS",
+    CMD_VOTE                          = "CMD_VOTE",
+    CMD_CHANGE_LANG                   = "CMD_CHANGE_LANG",
+    CMD_ADD_TO_ROUND                  = "CMD_ADD_TO_ROUND",
+    CMD_REMOVE_FROM_ROUND             = "CMD_REMOVE_FROM_ROUND",
+    CMD_KICK                          = "CMD_KICK",
+    CMD_MUTE                          = "CMD_MUTE",
+    CMD_UNMUTE                        = "CMD_UNMUTE",
+    CMD_CHANGE_TEAM                   = "CMD_CHANGE_TEAM",
+    CMD_ROUND_START                   = "CMD_ROUND_START",
+    CMD_ROUND_END                     = "CMD_ROUND_END",
 
     PAGE_SHOW_CMD                     = "PAGE_SHOW_CMD",
   
@@ -340,6 +373,8 @@ declare namespace SHARED {
     ERR_TOO_MANY_MAPS                 = "ERR_TOO_MANY_MAPS",
     ERR_TOO_MANY_PLAYERS              = 'ERR_TOO_MANY_PLAYERS',
     ERR_WRONG_TYPE                    = "ERR_WRONG_TYPE",
+    ERR_PROFILE_NOT_FOUND             = "ERR_PROFILE_NOT_FOUND",
+    ERR_ROUND_PLAYER_NOT_FOUND        = "ERR_ROUND_PLAYER_NOT_FOUND",
   
     ERR_PLAYER_HAS_ALREADY_VOTED      = "ERR_PLAYER_HAS_ALREADY_VOTED",
   
@@ -348,6 +383,11 @@ declare namespace SHARED {
   
     ERR_ROUND_IS_NOT_RUNNING          = "ERR_ROUND_IS_NOT_RUNNING",
     ERR_ROUND_IS_RUNNING              = "ERR_ROUND_IS_RUNNING",
+    ERR_ROUND_IS_PAUSED               = "ERR_ROUND_IS_PAUSED",
+    ERR_ROUND_IS_UNPAUSED             = "ERR_ROUND_IS_UNPAUSED",
+    ERR_PLAYER_IN_ROUND               = "ERR_PLAYER_IN_ROUND",
+    ERR_PLAYER_NOT_IN_ROUND           = "ERR_PLAYER_NOT_IN_ROUND",
+
     TEAM_SELECTOR_CHANGE              = "TEAM_SELECTOR_CHANGE",
     TEAM_SELECTOR_CHANGE_CANCEL       = "TEAM_SELECTOR_CHANGE_CANCEL",
     TEAM_SELECTOR_CHANGE_TEAM         = "TEAM_SELECTOR_CHANGE_TEAM",
@@ -367,12 +407,21 @@ declare namespace SHARED {
     ALIVE                             = "ALIVE",
     DEAD                              = "DEAD",
 
+    CONTROL                           = "CONTROL",
+    CONTROL_SCOREBOARD                = "CONTROL_SCOREBOARD",
+    CONTROL_GAMEMENU                  = "CONTROL_GAMEMENU",
+    CONTROL_TEAMCHANGE                = "CONTROL_TEAMCHANGE",
+
     SCOREBOARD_PLAYERS                = "SCOREBOARD_PLAYERS",
     TIME_REMAINING                    = "TIME_REMAINING",
     VOTEMAP_NOTIFY                    = "VOTEMAP_NOTIFY",
     WEAPON_CHOOSE_TEXT                = "WEAPON_CHOOSE_TEXT",
+
     ROUND_START_MESSAGE               = "ROUND_START_MESSAGE",
     ROUND_STOP_MESSAGE                = "ROUND_STOP_MESSAGE",
+    ROUND_PAUSED_MESSAGE              = "ROUND_PAUSED_MESSAGE",
+    ROUND_ADD_TO_ROUND_SUCCESS        = "ROUND_ADD_TO_ROUND_SUCCESS",
+    ROUND_REMOVE_FROM_ROUND_SUCCESS   = "ROUND_REMOVE_FROM_ROUND_SUCCESS",
 
     GROUP_LOGIN_SUCCESS               = "GROUP_LOGIN_SUCCESS",
     GROUP_LOGIN_FAILURE               = "GROUP_LOGIN_FAILURE",
@@ -392,6 +441,31 @@ declare namespace SHARED {
     PLAYER_MUTED                      = "PLAYER_MUTED",
     PLAYER_UNMUTED                    = "PLAYER_UNMUTED",
     PLAYER_IS_MUTED                   = "PLAYER_IS_MUTED",
+    PLAYER_CHANGED_TEAM               = "PLAYER_CHANGED_TEAM",
+    PLAYER_JOINED                     = "PLAYER_JOINED",
+    PLAYER_LEFT                       = "PLAYER_LEFT",
     REASON_NULL                       = "REASON_NULL",
+
+    GAMEMENU_PROFILE                  = "GAMEMENU_PROFILE",
+    GAMEMENU_PROFILE_TITLE            = "GAMEMENU_PROFILE_TITLE",
+
+    GAMEMENU_PLAYERS                  = "GAMEMENU_PLAYERS",
+    GAMEMENU_PLAYERS_TD_ID            = "GAMEMENU_PLAYERS_TD_ID",
+    GAMEMENU_PLAYERS_TD_NAME          = "GAMEMENU_PLAYERS_TD_NAME",
+    GAMEMENU_PLAYERS_TD_MMR           = "GAMEMENU_PLAYERS_TD_MMR",
+    GAMEMENU_PLAYERS_TD_ACTIONS       = "GAMEMENU_PLAYERS_TD_ACTIONS",
+
+    GAMEMENU_HISTORY                  = "GAMEMENU_HISTORY",
+    GAMEMENU_HISTORY_TD_RESULT        = "GAMEMENU_HISTORY_TD_RESULT",
+    GAMEMENU_HISTORY_TD_DATE          = "GAMEMENU_HISTORY_TD_DATE",
+    GAMEMENU_HISTORY_TD_KDA           = "GAMEMENU_HISTORY_TD_KDA",
+
+    GAMEMENU_VOTE                     = "GAMEMENU_VOTE",
+    GAMEMENU_VOTE_LABEL               = "GAMEMENU_VOTE_LABEL",
+    GAMEMENU_VOTE_PLACEHOLDER         = "GAMEMENU_VOTE_PLACEHOLDER",
+    GAMEMENU_VOTE_NOMINATE            = "GAMEMENU_VOTE_NOMINATE",
+
+    GAMEMENU_TOP                      = "GAMEMENU_TOP",
+    GAMEMENU_CREDITS                  = "GAMEMENU_CREDITS",
   }
 }

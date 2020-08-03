@@ -8,6 +8,8 @@ import { ErrorHandler } from "../core/ErrorHandler"
 @singleton()
 @injectable()
 class DialogManager {
+  private toggleMap: { [key: string]: boolean } = {}
+
   constructor(
     readonly browserManager: BrowserManager,
     readonly errHandler: ErrorHandler,
@@ -33,6 +35,29 @@ class DialogManager {
   close(RPC_CLOSE_DIALOG: SHARED.RPC_DIALOG) {
     try {
       this.browserManager.callBrowser(ENUMS.CEF.MAIN, RPC_CLOSE_DIALOG)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Toggle the dialog by RPC_TOGGLE_DIALOG
+   */
+  toggle(RPC_TOGGLE_DIALOG: SHARED.RPC_DIALOG) {
+    try {
+      if (typeof this.toggleMap[RPC_TOGGLE_DIALOG] === 'undefined') {
+        this.toggleMap[RPC_TOGGLE_DIALOG] = false
+      }
+
+      this.toggleMap[RPC_TOGGLE_DIALOG] = !this.toggleMap[RPC_TOGGLE_DIALOG]
+
+      if (this.toggleMap[RPC_TOGGLE_DIALOG]) {
+        this.onOpen()
+      } else {
+        this.onClose()
+      }
+
+      this.browserManager.callBrowser(ENUMS.CEF.MAIN, RPC_TOGGLE_DIALOG, this.toggleMap[RPC_TOGGLE_DIALOG])
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }

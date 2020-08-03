@@ -117,8 +117,7 @@ class GroupManager {
       const lang = this.playerManager.getLang(player)
       // check if player has access
       if (!this.isAdminOrRoot(player)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
   
       // check if args are correct
@@ -137,8 +136,7 @@ class GroupManager {
         this.isAdmin(player)
         && this.isAdminOrRoot(addingPlayer)
       ) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_SIMILAR_GROUP)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_SIMILAR_GROUP, player)
       }
   
       // add a new group to the player
@@ -168,8 +166,7 @@ class GroupManager {
     try {
       // check if player has access
       if (!this.isRoot(player)) {
-        const message = this.lang.get(player.sharedData.lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
   
       // check if args are correct
@@ -204,8 +201,7 @@ class GroupManager {
         
       // check if player has access
       if (!this.isAdminOrModerator(player)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
 
       // check if args are correct
@@ -245,8 +241,7 @@ class GroupManager {
       
       // check if player has access
       if (!this.isAdminOrRoot(player)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
 
       // check if args are correct
@@ -257,8 +252,7 @@ class GroupManager {
       const addingPlayer = this.playerManager.getPlayerById(+playerId, player)
       // check if adding player has user or moderator group
       if (!this.isRoot(player) && this.isAdminOrRoot(addingPlayer)) {
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_SIMILAR_GROUP)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_SIMILAR_GROUP, player)
       }
 
       // add the user group to a player

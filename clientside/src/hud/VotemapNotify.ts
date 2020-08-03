@@ -25,10 +25,10 @@ class VotemapNotify extends Hud {
    * @inheritdoc
    */
   start(): void {
-    this.stopped          = false
-    this.secondInterval   = this.dummyConfig.getVoteIntervalSeconds()
+    this.secondInterval = this.dummyConfig.getVoteIntervalSeconds()
 
     mp.events.add(RageEnums.EventKey.RENDER, this.render)
+
     this.tick(() => {
       this.secondInterval -= 1
       if (this.secondInterval < 0) this.stop()

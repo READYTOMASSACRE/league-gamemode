@@ -44,8 +44,10 @@ class DummyPlayerStatManager {
         const playerInfo = this.getPlayerInfo(dummy, pings)
 
         if (playerInfo) {
-          const teamId = dummy.data.teamId
-          if (teamId) playerTeams.set(teamId, [...playerTeams.get(teamId)!, playerInfo])
+          playerTeams.set(
+            playerInfo.teamId,
+            [...playerTeams.get(playerInfo.teamId)!, playerInfo]
+          )
         }
       })
 
@@ -80,6 +82,7 @@ class DummyPlayerStatManager {
         lvl     : 0,
         damage  : damage,
         ping    : ping,
+        teamId  : player.sharedData.teamId
       }
     }
 

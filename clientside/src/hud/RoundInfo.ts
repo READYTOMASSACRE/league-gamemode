@@ -23,31 +23,39 @@ const DELAY_INSPECT = 1000
 class RoundInfo extends Hud {
   protected readonly INTERVAL = 300
 
-  private remaining       : number = 0
-  private state?          : InfoPanel
-  private delay           : number = 0
+  private remaining             : number = 0
+  private state?                : InfoPanel
+  private roundStartDate        : number = 0
+  private roundSecondInterval   : number = 0
+
   constructor(
-    readonly dummyConfig: DummyConfigManager,
-    readonly lang: DummyLanguageManager,
-    readonly errHandler: ErrorHandler,
-    readonly dialogManager: DialogManager,
-    readonly browserManager: BrowserManager,
-    readonly playerManager: PlayerManager,
+    readonly dummyConfig    : DummyConfigManager,
+    readonly lang           : DummyLanguageManager,
+    readonly errHandler     : ErrorHandler,
+    readonly dialogManager  : DialogManager,
+    readonly browserManager : BrowserManager,
+    readonly playerManager  : PlayerManager,
   ) {
     super(dummyConfig, lang, errHandler)
+
+    this.drawPause = this.drawPause.bind(this)
   }
 
   /**
    * @inheritdoc
    */
-  start(payload: Partial<InfoPanel>): void {
-    this.stopped = false
-    this.resetRoundSeconds()
-    this.update(payload)
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, true)
+  start(payload: Partial<InfoPanel>, roundIntervalMs: number): void {
+    this.roundStartDate = Date.now()
+    this.roundSecondInterval = Math.round(roundIntervalMs / 1000)
 
+    this.resetRoundInterval()
+
+    this.update(payload)
+    
     // set up observable function per RoundInfo.SECOND
     this.tick(() => this.tickUpdate())
+
+    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, true)
   }
 
   /**
@@ -55,6 +63,7 @@ class RoundInfo extends Hud {
    */
   stop(): void {
     this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, false)
+    this.roundStartDate = 0
     this.stopTick()
   }
 
@@ -62,11 +71,7 @@ class RoundInfo extends Hud {
    * Update the state of round info panel
    */
   tickUpdate(): void {
-    const delay = Date.now()
-    if (delay - this.delay >= DELAY_INSPECT) {
-      this.delay = delay
-      this.remaining -= 1
-    }
+    this.updateRoundTimeleft()
 
     const updatePlayerHealths: any = {
       ATTACKERS: { players: this.getPlayerHealths(SHARED.TEAMS.ATTACKERS) },
@@ -95,6 +100,46 @@ class RoundInfo extends Hud {
     }
   }
 
+  /**
+   * Start drawing a message about pause
+   */
+  startPause(): void {
+    mp.events.add(RageEnums.EventKey.RENDER, this.drawPause)
+
+    const currentDate           = Date.now()
+    const timePassed            = Math.round((currentDate - this.roundStartDate)/1000)
+    this.roundSecondInterval    = this.roundSecondInterval - timePassed
+
+    this.stopTick()
+  }
+
+  /**
+   * Stop drawing a message about pause
+   */
+  stopPause(): void {
+    mp.events.remove(RageEnums.EventKey.RENDER, this.drawPause)
+    this.roundStartDate = Date.now()
+    this.tick(() => this.tickUpdate())
+  }
+
+  /**
+   * Draw message that round is paused
+   */
+  drawPause(): void {
+    try {
+      const text = this.lang.get(SHARED.MSG.ROUND_PAUSED_MESSAGE)
+  
+      mp.game.graphics.drawText(text, [0.5, 0.5], this.textParams)
+    } catch (err) {
+      this.stopPause()
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Get player health info
+   * @param {SHARED.TEAMS} teamId 
+   */
   private getPlayerHealths(teamId: SHARED.TEAMS): number[] {
     const players = this.playerManager.getPlayersWithState([SHARED.STATE.ALIVE, SHARED.STATE.DEAD])
 
@@ -135,11 +180,18 @@ class RoundInfo extends Hud {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2,'0')}`
   }
 
+  private resetRoundInterval(): void {
+    this.roundSecondInterval = this.dummyConfig.getRoundIntervalMinutes() * 60
+  }
+
   /**
    * Set round seconds from the server
    */
-  private resetRoundSeconds(): void {
-    this.remaining = this.dummyConfig.getRoundIntervalMinutes() * 60
+  private updateRoundTimeleft(): void {
+    const pausedDate      = Date.now()
+    const timePassed      = Math.round((pausedDate - this.roundStartDate) / 1000)
+
+    this.remaining        = this.roundSecondInterval - timePassed
   }
 }
 

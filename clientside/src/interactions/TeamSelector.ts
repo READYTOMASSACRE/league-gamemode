@@ -27,6 +27,7 @@ type TeamSelectorParams = {
 class TeamSelector implements INTERFACES.Interaction {
   static readonly CAMERA_NAME = "TEAM_SELECTOR"
 
+  public active               : boolean = false
   private teams               : PlayerTeam[]
   private playerManager       : PlayerManager
   private errHandler          : ErrorHandler
@@ -76,7 +77,6 @@ class TeamSelector implements INTERFACES.Interaction {
    */
   start(): void {
     mp.events.add(RageEnums.EventKey.ENTITY_STREAM_IN, this.streamIn)
-    this.playerManager.setCustomData("isSelecting", true)
     this.playerManager.setState(SHARED.STATE.SELECT)
 
     this.currentTeamIndex = 0
@@ -86,8 +86,11 @@ class TeamSelector implements INTERFACES.Interaction {
     this.prepareCam(true)
     this.refreshPeds(true)
     this.bindKeys()
+
     this.hudManager.teamSelecting.setTeamData(this.currentTeam.ID)
     this.hudManager.teamSelecting.start()
+
+    this.active = true
   }
 
   /**
@@ -101,6 +104,8 @@ class TeamSelector implements INTERFACES.Interaction {
     this.hudManager.teamSelecting.stop()
 
     mp.events.remove(RageEnums.EventKey.ENTITY_STREAM_IN, this.streamIn)
+    this.playerManager.setCustomData("isSelecting", false)
+    this.active = false
   }
 
   /**
@@ -230,11 +235,10 @@ class TeamSelector implements INTERFACES.Interaction {
   /**
    * Submit decision and after send data and spawn the player into the lobby
    */
-  private submit(): void {
-    try {
+   submit(): void {
+     try {
       this.stop()
   
-      this.playerManager.setCustomData("isSelecting", false)
       this.playerManager.setTeam(this.currentTeam.ID)
       this.playerManager.setModel(this.currentPed.model)
       this.playerManager.setState(SHARED.STATE.IDLE)

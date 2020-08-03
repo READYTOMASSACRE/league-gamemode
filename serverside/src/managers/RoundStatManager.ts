@@ -3,13 +3,20 @@ import { event, eventable } from "rage-decorators"
 import { RoundStat, RoundKeyValueCollection } from "../db/domains/RoundStat"
 import { RoundStatRepo } from "../db/repos/RoundStatRepo"
 import { DummyPlayerRoundStatManager } from "./dummies/DummyPlayerRoundStatManager"
-import { logMethod } from "../utils"
+import { logMethod, formatDate } from "../utils"
 import { DEBUG } from "../bootstrap"
 import { PlayerManager } from "./PlayerManager"
 import { PlayerProfileManager } from "./PlayerProfileManager"
 import { RoundStatUpdateError } from "../errors/PlayerErrors"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { DummyRoundStatManager } from "./dummies/DummyRoundStatManager"
+import { DomainConverter } from "../db/domains/DomainConverter"
+
+type RoundHistory = {
+  result: string
+  date: string
+  kda: string
+}
 
 /**
  * Class to manage round stats
@@ -49,13 +56,14 @@ class RoundStatManager {
    * @param teamWinner - id of team winner
    */
   @event(SHARED.EVENTS.SERVER_ROUND_END)
-  async roundEnd(teamWinner: SHARED.TEAMS | false): Promise<void> {
+  async roundEnd(teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): Promise<void> {
     try {
-      this.roundStat.setWinners(teamWinner)
+      this.roundStat.setWinner(teamWinner)
       this.dummyRoundStatManager.setWinner(teamWinner)
 
+      const players = [...this.roundStat.state.ATTACKERS, ...this.roundStat.state.DEFENDERS]
       await Promise.all([
-        this.playerStatManager.saveStats(this.roundStat.state.players),
+        this.playerStatManager.saveStats(players, teamWinner),
         this.roundStat.save(this.repo),
       ])
   
@@ -148,6 +156,49 @@ class RoundStatManager {
    */
   addKill(player: PlayerMp) {
     this.playerRoundStatUpdate(player, "kill", 1)
+  }
+
+  /**
+   * Get all matches in the last week
+   * @param {PlayerMp} player
+   */
+  async getMatchesLastWeek(player: PlayerMp): Promise<RoundHistory[]> {
+    try {
+      const matches = await this.repo.getMatchesLastWeekByPlayer(player)
+      const lang = this.playerManager.getLang(player)
+
+      return matches.map(match => {
+        const roundStat = this.getDomain(match)
+        let result = 'Lost'
+        
+        if (roundStat.isDraw()) {
+          result = 'Draw'
+        } else if(roundStat.isPlayerWinner(player)) {
+          result = 'Won'
+        }
+  
+        const [k, d, a] = roundStat.getPlayerKDA(player)
+        const date = formatDate(match.created_at, lang)
+
+        return {
+          result,
+          date,
+          kda: `${k}/${d}/${a}`
+        }
+      })
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+
+    return []
+  }
+
+  /**
+   * Get the round stat domain
+   * @param {SHARED.TYPES.RoundStatDTO} dto 
+   */
+  getDomain(dto: SHARED.TYPES.RoundStatDTO): RoundStat {
+    return DomainConverter.fromDto(RoundStat, dto)
   }
 
   /**

@@ -10,7 +10,7 @@ abstract class Hud implements INTERFACES.HudElement {
   protected readonly INTERVAL: number = 1000
 
   protected stopped: boolean = false
-  protected running: boolean = false
+  protected interval?: NodeJS.Timeout
   
   constructor(
     readonly dummyConfig: DummyConfigManager,
@@ -49,14 +49,16 @@ abstract class Hud implements INTERFACES.HudElement {
    */
   tick(callable: Function): void {
     try {
-      if (this.stopped || this.running) return
+      this.stopped = false
+      if (this.interval) {
+        throw new ReferenceError("Interval has already set up")
+      }
   
-      this.running = true
       callable()
-  
-      setTimeout(() => {
-        this.running = false
-        this.tick(callable)
+
+      this.interval = setInterval(() => {
+        if (this.stopped) return this.stopTick()
+        if (typeof callable === 'function') callable()
       }, this.INTERVAL)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
@@ -68,7 +70,11 @@ abstract class Hud implements INTERFACES.HudElement {
    */
   stopTick(): void {
     this.stopped = true
-    this.running = false
+
+    if (typeof this.interval !== 'undefined') {
+      clearInterval(this.interval)
+      this.interval = undefined
+    }
   }
 
   /**

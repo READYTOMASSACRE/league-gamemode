@@ -74,6 +74,8 @@ abstract class EntityBase<E extends EntityMp> implements INTERFACES.EntityManage
    * @param {SHARED.STATE | SHARED.STATE[]} state 
    */
   hasState(entity: E, state: SHARED.STATE | SHARED.STATE[]): boolean {
+    if (typeof entity === 'undefined') return false
+
     state = Array.isArray(state) && state || [state]
 
     return state.indexOf(entity.sharedData.state) !== -1

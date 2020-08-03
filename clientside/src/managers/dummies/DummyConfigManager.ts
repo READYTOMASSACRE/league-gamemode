@@ -1,5 +1,7 @@
 import { Dummy } from "../../entities/Dummy"
 import { singleton, injectable } from "tsyringe"
+import { ErrorHandler } from "../../core/ErrorHandler"
+import { print } from "../../utils"
 
 /**
  * A manager to handle dummies
@@ -10,8 +12,25 @@ class DummyConfigManager {
   private readonly type = SHARED.ENTITIES.CONFIG
   private _dummy?: Dummy<SHARED.ENTITIES.CONFIG>
 
-  constructor() {
-    this.registerDummies = this.registerDummies.bind(this)
+  constructor(readonly errHandler: ErrorHandler) {
+    this.registerDummies    = this.registerDummies.bind(this)
+    this.cefCreditsRequest  = this.cefCreditsRequest.bind(this)
+  }
+
+  /**
+   * RPC Call
+   * 
+   * Fires from the CEF to get credits info
+   */
+  cefCreditsRequest(): any {
+    try {
+      const gamemode    = this.dummy.data.GAMEMODE
+      const version     = this.dummy.data.VERSION
+
+      return { gamemode, version }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
   }
 
   /**
@@ -61,17 +80,29 @@ class DummyConfigManager {
   /**
    * Get a nametag config
    */
-  getNameTagConfig(): SHARED.TYPES.NametagConfig
-  {
+  getNameTagConfig(): SHARED.TYPES.NametagConfig {
     return this.dummy.data.HUD.NAMETAG
   }
 
   /**
    * Get a global hud config
    */
-  getGlobalHudConfig(): SHARED.TYPES.GlobalHudConfig
-  {
+  getGlobalHudConfig(): SHARED.TYPES.GlobalHudConfig {
     return this.dummy.data.HUD.GLOBAL
+  }
+
+  /**
+   * Get a gamemode name
+   */
+  getGamemode(): string {
+    return this.dummy.data.GAMEMODE
+  }
+
+  /**
+   * Get a gamemode version
+   */
+  getGamemodeVersion(): string {
+    return this.dummy.data.VERSION
   }
 
   /**

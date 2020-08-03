@@ -1,3 +1,5 @@
 export * from './decorators'
 export * from './functions'
 export * from './vector2'
+export const cmdName    = '{{cmdName}}'
+export const groupname  = '{{groupName}}'

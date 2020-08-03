@@ -39,9 +39,9 @@ class ErrorHandler {
       })
 
       return true
+    } else {
+      return this.error(err)
     }
-
-    return false
   }
 
   /**

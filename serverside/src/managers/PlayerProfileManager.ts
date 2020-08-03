@@ -1,11 +1,11 @@
 import { singleton, injectable } from "tsyringe"
 import { PlayerProfileRepo } from "../db/repos/PlayerProfileRepo"
 import { DomainConverter } from "../db/domains/DomainConverter"
-import { PlayerProfile } from "../db/domains/PlayerProfile"
+import { PlayerProfile, CEFProfileDTO } from "../db/domains/PlayerProfile"
 import { logMethod } from "../utils"
 import { DEBUG } from "../bootstrap"
 import { ErrorHandler } from "../core/ErrorHandler"
-import { IsNotExistsError } from "../errors/LogErrors"
+import { NotFoundNotifyError } from "../errors/PlayerErrors"
 
 /**
  * Class to manage player stats
@@ -38,19 +38,18 @@ class PlayerProfileManager {
 
   /**
    * Save round data per player
-   * @param stats round stat
-   * 
-   * @throws {PlayerStatUpdateError}
+   * @param {SHARED.TYPES.PlayerRoundStatDTO[]} stats round stat
+   * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false} teamWinner
    */
   @logMethod(DEBUG)
-  saveStats(stats: SHARED.TYPES.PlayerRoundStatDTO[]): Promise<any> {
+  saveStats(stats: SHARED.TYPES.PlayerRoundStatDTO[], teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): Promise<any> {
     const promises: any = []
 
     stats.forEach(stat => {
       const player = mp.players.at(stat.id)
 
       if (mp.players.exists(player) && player.sharedData.profile) {
-        this.updateRoundStats(player, stat)
+        this.updateRoundStats(player, stat, teamWinner)
         promises.push(this.save(player))
       }
     })
@@ -62,10 +61,20 @@ class PlayerProfileManager {
    * Update player's round statistics
    * @param {PlayerMp} player - the player who will be updated
    * @param {SHARED.TYPES.PlayerRoundStatDTO} dto - round data
+   * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false} dto - round data
    */
-  updateRoundStats(player: PlayerMp, dto: SHARED.TYPES.PlayerRoundStatDTO): boolean {
+  updateRoundStats(player: PlayerMp, dto: SHARED.TYPES.PlayerRoundStatDTO, teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): boolean {
+    const teamId  = player.sharedData.teamId
     const profile = this.getDomain(player)
     profile.updateRoundData(dto)
+
+    if (teamWinner === teamId) {
+      profile.setWin()
+    } else if (teamWinner === false) {
+      profile.setDraw()
+    } else {
+      profile.setLose()
+    }
 
     return this.update(player, profile)
   }
@@ -103,9 +112,9 @@ class PlayerProfileManager {
    * Get player profile domain
    * @param {PlayerMp} player 
    */
-  getDomain(player: PlayerMp): PlayerProfile {
+  getDomain(player: PlayerMp, notifiedPlayer?: PlayerMp): PlayerProfile {
     if (!player.sharedData.profile) {
-      throw new IsNotExistsError("PlayerProfile dto is not exists")
+      throw new NotFoundNotifyError(SHARED.MSG.ERR_PROFILE_NOT_FOUND, notifiedPlayer || player)
     }
 
     return DomainConverter.fromDto(PlayerProfile, player.sharedData.profile)

@@ -24,11 +24,11 @@ interface Round extends RoundParams {}
  */
 class Round {
   private roundTimer?: NodeJS.Timeout
-  public roundStartDate?: Date
+  public roundStartDate: number = 0
 
   constructor(params: RoundParams) {
     Object.assign(this, params)
-    this.end = this.end.bind(this)
+    this.end              = this.end.bind(this)
   }
 
   /**
@@ -36,8 +36,8 @@ class Round {
    */
   @logMethod(DEBUG)
   start(): void {
-    this.roundTimer = setTimeout(this.end, this.roundTimeInterval)
-    this.roundStartDate = new Date()
+    this.roundTimer       = setTimeout(this.end, this.roundTimeInterval)
+    this.roundStartDate   = Date.now()
 
     this.players.forEach(player => this.prepare(player))
 
@@ -52,10 +52,9 @@ class Round {
     /* clear timer and date variables */
     if (this.roundTimer) clearTimeout(this.roundTimer)
 
-    this.roundTimer = undefined
-    this.roundStartDate = undefined
-
-    const teamWinner = this.getTeamWinner()
+    this.roundTimer       = undefined
+    this.roundStartDate   = 0
+    const teamWinner      = this.getTeamWinner()
 
     this.players.forEach(player => this.prepareEnd(player))
 
@@ -63,10 +62,47 @@ class Round {
   }
 
   /**
+   * Toggle pause
+   * @param {boolean} toggle - on/off pause
+   */
+  togglePause(toggle: boolean): void {
+    return toggle
+      ? this.pause()
+      : this.unpause()
+  }
+
+  /**
+   * Pausing a round
+   */
+  pause(): void {
+    if (this.roundTimer) clearTimeout(this.roundTimer)
+
+    this.roundTimer = undefined
+
+    const currentDate         = Date.now()
+    const timePassedMs        = currentDate - this.roundStartDate
+    this.roundTimeInterval    = this.roundTimeInterval - timePassedMs
+
+    this.players.forEach(player => player.call(SHARED.EVENTS.SERVER_ROUND_PAUSE, [true]))
+  }
+
+  /**
+   * Unpausing round
+   */
+  unpause(): void {
+    /* call end of the round is interval was ended or broken */
+    if (this.roundTimeInterval < 0) return this.end()
+
+    this.roundStartDate   = Date.now()
+    this.roundTimer       = setTimeout(this.end, this.roundTimeInterval)
+    this.players.forEach(player => player.call(SHARED.EVENTS.SERVER_ROUND_PAUSE, [false]))
+  }
+
+  /**
    * Prepare the player to start a new round
    * @param {PlayerMp} player 
    */
-  prepare(player: PlayerMp): boolean {
+  prepare(player: PlayerMp, hasAdded: boolean = false): boolean {
     const teamId = this.playerManager.getTeam(player)
     const vector = this.dummyMapManager.getRandomSpawnVector(this.mapId, teamId)
 
@@ -75,7 +111,11 @@ class Round {
     this.playerManager.setState(player, SHARED.STATE.ALIVE)
     this.playerManager.spawn(player, vector)
 
-    player.call(SHARED.EVENTS.SERVER_ROUND_START, [this.mapId, this.players.map(ppl => ppl.id)])
+    player.call(SHARED.EVENTS.SERVER_ROUND_START, [this.mapId, this.players.map(ppl => ppl.id), this.roundTimeInterval])
+
+    if (!hasAdded) {
+      this.playerManager.success(player, SHARED.MSG.ROUND_START_MESSAGE, this.mapId.toString())
+    }
 
     return true
   }
@@ -84,12 +124,16 @@ class Round {
    * Prepare the player to end a round
    * @param {PlayerMp} player 
    */
-  prepareEnd(player: PlayerMp): boolean {
+  prepareEnd(player: PlayerMp, hasRemoved: boolean = false): boolean {
     player.dimension = this.dimension.lobby
     player.call(SHARED.EVENTS.SERVER_ROUND_END, [this.mapId])
 
     this.playerManager.setState(player, SHARED.STATE.IDLE)
     this.playerManager.spawn(player, this.lobby)
+    
+    if (!hasRemoved) {
+      this.playerManager.success(player, SHARED.MSG.ROUND_STOP_MESSAGE)
+    }
 
     return true
   }
@@ -101,8 +145,9 @@ class Round {
   addToRound(player: PlayerMp): boolean {
     if (this.players.find(pl => pl.id === player.id && pl.type === player.type)) return false
 
+    const hasAdded = true
     this.players = [...this.players, player]
-    this.prepare(player)
+    this.prepare(player, hasAdded)
 
     return true
   }
@@ -118,10 +163,19 @@ class Round {
 
     if (players.length === this.players.length) return false
 
+    const hasRemoved = true
     this.players = players
-    this.prepareEnd(player)
+    this.prepareEnd(player, hasRemoved)
 
     return true  
+  }
+
+  /**
+   * Check if player in the round
+   * @param {PlayerMp} player 
+   */
+  hasPlayer(player: PlayerMp): boolean {
+    return this.players.some(ppl => ppl.id === player.id)
   }
 
   /**
@@ -184,7 +238,14 @@ class Round {
    * Getter of the current state round of the round
    */
   get isRunning(): boolean {
-    return !!this.roundStartDate
+    return this.roundStartDate > 0
+  }
+
+  /**
+   * Getter of the current state round of the round
+   */
+  get isPaused(): boolean {
+    return this.isRunning && typeof this.roundTimer === 'undefined'
   }
 }
 

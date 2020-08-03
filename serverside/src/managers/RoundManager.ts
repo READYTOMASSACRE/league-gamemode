@@ -1,13 +1,13 @@
 import { app, DEBUG } from "../bootstrap"
 import { Round } from '../entities/Round'
-import { logMethod } from "../utils"
+import { logMethod, cmdName } from "../utils"
 import { commandable, command, event, eventable } from "rage-decorators"
 import { WeaponManager } from "./WeaponManager"
-import { singleton, autoInjectable, inject } from "tsyringe"
+import { singleton, autoInjectable } from "tsyringe"
 import { DummyMapManager } from "./dummies/DummyMapManager"
 import { PlayerManager } from "./PlayerManager"
 import { RoundStatManager } from "./RoundStatManager"
-import { RoundIsRunningError, InvalidAccessNotify } from "../errors/PlayerErrors"
+import { RoundIsRunningError, RoundIsPausedError, RoundIsNotRunningError, RoundIsNotPausedError, InvalidArgumentNotify, InvalidAccessNotify } from "../errors/PlayerErrors"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { VoteMapManager } from "./VoteMapManager"
 import { GroupManager } from "./GroupManager"
@@ -47,6 +47,10 @@ class RoundManager {
     this.roundEndCmd          = this.roundEndCmd.bind(this)
     this.voteCmd              = this.voteCmd.bind(this)
     this.voteTimeoutHandler   = this.voteTimeoutHandler.bind(this)
+    this.pauseCmd             = this.pauseCmd.bind(this)
+    this.unpauseCmd           = this.unpauseCmd.bind(this)
+    this.addToRoundCmd        = this.addToRoundCmd.bind(this)
+    this.removeFromRoundCmd   = this.removeFromRoundCmd.bind(this)
   }
 
   /**
@@ -99,13 +103,20 @@ class RoundManager {
    * 
    * Starts the new round
    */
-  @command(['roundstart', 'rs'])
-  roundStartCmd(player: PlayerMp, _: string, mapIdOrCode: string): void {
+  @command(['roundstart', 'rs'], { desc: cmdName })
+  roundStartCmd(player: PlayerMp, cmdDesc: string, mapIdOrCode?: string): void {
     try {
       if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      if (typeof mapIdOrCode === 'undefined') {
         const lang = this.playerManager.getLang(player)
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        const cmdDescText = this.lang
+          .get(lang, SHARED.MSG.CMD_ROUND_START)
+          .replace(cmdName, cmdDesc)
+
+        return this.playerManager.notify(player, cmdDescText)
       }
 
       this.roundStart(mapIdOrCode, player)
@@ -125,9 +136,7 @@ class RoundManager {
   roundEndCmd(player: PlayerMp): void {
     try {
       if (!this.groupManager.isAdminOrRoot(player)) {
-        const lang = this.playerManager.getLang(player)
-        const message = this.lang.get(lang, SHARED.MSG.GROUP_ERR_WRONG_ACCESS)
-        throw new InvalidAccessNotify(message, player)
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
 
       this.roundEnd()
@@ -144,24 +153,157 @@ class RoundManager {
    * @param {string} cmdDesc
    * @param {string} mapIdOrCode - the choice of a player
    */
-  @command(["vote", "votemap"], { desc: '{{cmdName}}' })
+  @command(["vote", "votemap"], { desc: cmdName })
   voteCmd(player: PlayerMp, cmdDesc: string, mapIdOrCode?: string): void {
     try {
       if (typeof mapIdOrCode === 'undefined') {
-        const lang = this.playerManager.getLang(player)
-        const message = this.lang.get(lang, SHARED.MSG.CMD_DESC_VOTE)
-        return player.outputChatBox(message.replace('{{cmdName}}', cmdDesc))
+        const lang    = this.playerManager.getLang(player)
+        const message = this.lang.get(lang, SHARED.MSG.CMD_VOTE)
+        return player.outputChatBox(message.replace(cmdName, cmdDesc))
       }
   
-      if (
-        this.voteManager.isFirstNominate
-        && !this.voteTimer
-      ) {
-        this.voteTimer = setTimeout(this.voteTimeoutHandler, this.voteManager.nominateTime)
+      this.vote(player, mapIdOrCode)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Vote a map
+   * @param {PlayerMp} player 
+   * @param {string} mapIdOrCode 
+   */
+  vote(player: PlayerMp, mapIdOrCode: number | string): void {
+    const firstNominate = this.voteManager.isFirstNominate
+    this.voteManager.vote(player, mapIdOrCode)
+
+    if (firstNominate && !this.voteTimer) {
+      this.voteTimer = setTimeout(this.voteTimeoutHandler, this.voteManager.nominateTime)
+    }
+  }
+
+  /**
+   * Command
+   * 
+   * Pause a round
+   * @param {PlayerMp} player
+   * @param {string} cmdDesc
+   */
+  @command("pause")
+  pauseCmd(player: PlayerMp, cmdDesc: string): void {
+    try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
       }
-      this.voteManager.vote(player, mapIdOrCode)
 
+      this.toggleRoundPause(true, player)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
 
+  /**
+   * Command
+   * 
+   * Unpause round
+   * @param {PlayerMp} player
+   * @param {string} cmdDesc
+   */
+  @command("unpause")
+  unpauseCmd(player: PlayerMp, cmdDesc: string): void {
+    try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      this.toggleRoundPause(false, player)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Command
+   * 
+   * Add to the round a player
+   * @param {PlayerMp} player
+   * @param {string} cmdDesc
+   * @param {string} idOrName - id or nickname an adding player
+   */
+  @command('add', { desc: cmdName })
+  addToRoundCmd(player: PlayerMp, cmdDesc: string, idOrName?: string): void {
+    try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      if (!this.round || !this.round.isRunning) {
+        throw new RoundIsNotRunningError(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING, player)
+      }
+
+      if (typeof idOrName === 'undefined') {
+        const lang = this.playerManager.getLang(player)
+        const cmdDescMessage = this.lang
+          .get(lang, SHARED.MSG.CMD_ADD_TO_ROUND)
+          .replace(cmdName, cmdDesc)
+
+        return player.outputChatBox(cmdDescMessage)
+      }
+
+      const findedPlayer = this.playerManager.getPlayerByIdOrName(idOrName, player)
+
+      if (this.round.hasPlayer(findedPlayer)) {
+        throw new InvalidArgumentNotify(SHARED.MSG.ERR_PLAYER_IN_ROUND, player, findedPlayer.name)
+      }
+
+      if (this.round.addToRound(findedPlayer)) {
+        mp.players.forEach(player => {
+          this.playerManager.success(player, SHARED.MSG.ROUND_ADD_TO_ROUND_SUCCESS, findedPlayer.name)
+        })
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Command
+   * 
+   * Remove from the round a player
+   * @param {PlayerMp} player
+   * @param {string} cmdDesc
+   * @param {string} idOrName - id or nickname an adding player
+   */
+  @command('remove', { desc: cmdName })
+  removeFromRoundCmd(player: PlayerMp, cmdDesc: string, idOrName?: string): void {
+    try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      if (!this.round || !this.round.isRunning) {
+        throw new RoundIsNotRunningError(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING, player)
+      }
+
+      if (typeof idOrName === 'undefined') {
+        const lang = this.playerManager.getLang(player)
+        const cmdDescMessage = this.lang
+          .get(lang, SHARED.MSG.CMD_REMOVE_FROM_ROUND)
+          .replace(cmdName, cmdDesc)
+
+        return player.outputChatBox(cmdDescMessage)
+      }
+
+      const findedPlayer = this.playerManager.getPlayerByIdOrName(idOrName, player)
+
+      if (!this.round.hasPlayer(findedPlayer)) {
+        throw new InvalidArgumentNotify(SHARED.MSG.ERR_PLAYER_NOT_IN_ROUND, player, findedPlayer.name)
+      }
+      if (this.round.removeFromRound(findedPlayer)) {
+        mp.players.forEach(player => {
+          this.playerManager.success(player, SHARED.MSG.ROUND_REMOVE_FROM_ROUND_SUCCESS, findedPlayer.name)
+        })
+      }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -216,6 +358,25 @@ class RoundManager {
     }
 
     return false
+  }
+
+  /**
+   * Toggle round pause if round is running
+   * @param {boolean} toggle - flag to turn on/off pause
+   * @param {PlayerMp} notifiedPlayer - (optional) a notified player about an error
+   */
+  toggleRoundPause(toggle: boolean, notifiedPlayer?: PlayerMp): void {
+    if (!this.round || !this.round.isRunning) {
+      throw new RoundIsNotRunningError(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING, notifiedPlayer)
+    }
+
+    if (toggle === true && this.round.isPaused) {
+      throw new RoundIsPausedError(SHARED.MSG.ERR_ROUND_IS_PAUSED, notifiedPlayer)
+    } else if (toggle === false && !this.round.isPaused) {
+      throw new RoundIsNotPausedError(SHARED.MSG.ERR_ROUND_IS_UNPAUSED, notifiedPlayer)
+    }
+
+    return this.round.togglePause(toggle)
   }
 
   /**

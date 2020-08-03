@@ -1,4 +1,4 @@
-import { event, eventable } from "rage-decorators"
+import { event, eventable, commandable, command } from "rage-decorators"
 import { singleton, autoInjectable } from "tsyringe"
 import { app } from "../bootstrap"
 import { EntityBase } from "../entities/EntityBase"
@@ -11,14 +11,15 @@ import { DummyConfigManager } from "./dummies/DummyConfigManager"
 import { getFormattedCurrentTime, keys, escapeRegExp, isNumber } from "../utils"
 import { SharedDataValidator } from "../entities/validators/SharedDataValidator"
 import { NotFoundNotifyError, InvalidArgumentNotify } from "../errors/PlayerErrors"
-import { IsNotExistsError } from "../errors/LogErrors"
 import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
+import { weapons } from "../declarations/weapons"
 
 /**
  * Class to manage interactions with the players
  */
 @singleton()
 @eventable()
+@commandable()
 @autoInjectable()
 class PlayerManager extends EntityBase<PlayerMp> {
   static readonly LOBBY = app.getConfig().get("LOBBY")
@@ -38,6 +39,8 @@ class PlayerManager extends EntityBase<PlayerMp> {
     this.spawnInLobby   = this.spawnInLobby.bind(this)
     this.setSharedData  = this.setSharedData.bind(this)
     this.playerChat     = this.playerChat.bind(this)
+    this.playerJoin     = this.playerJoin.bind(this)
+    this.playerQuit     = this.playerQuit.bind(this)
   }
 
   /**
@@ -71,8 +74,21 @@ class PlayerManager extends EntityBase<PlayerMp> {
    * @param {PlayerMp} player 
    */
   @event(RageEnums.EventKey.PLAYER_DEATH)
-  playerDeath(player: PlayerMp): void {
-    return this.spawnInLobby(player)
+  playerDeath(player: PlayerMp, reason: number, killer: PlayerMp): void {
+    try {
+      if (this.hasState(killer, [SHARED.STATE.ALIVE])) {
+        const { COLOR: playerColor } = this.dummyConfig.getTeamData(player.sharedData.teamId)
+        const { COLOR: killerColor } = this.dummyConfig.getTeamData(killer.sharedData.teamId)
+
+        const playerData = { name: player.name, color: playerColor }
+        const killerData = { name: killer.name, color: killerColor }
+        mp.players.forEach(ppl => ppl.call(SHARED.EVENTS.SERVER_DEATHLOG, [playerData, weapons[reason] || "", killerData]))
+      }
+
+      return this.spawnInLobby(player)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
   }
 
   /**
@@ -169,6 +185,36 @@ class PlayerManager extends EntityBase<PlayerMp> {
   }
 
   /**
+   * Event
+   * 
+   * Fires when when a player has joined the server
+   * @param {PlayerMp} player 
+   */
+  @event(RageEnums.EventKey.PLAYER_JOIN)
+  playerJoin(player: PlayerMp): void {
+    try {
+      mp.players.call(mp.players.toArray(), SHARED.EVENTS.SERVER_NOTIFY_CHAT, [SHARED.MSG.PLAYER_JOINED, player.name])
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires when when a player has left from the server
+   * @param {PlayerMp} player 
+   */
+  @event(RageEnums.EventKey.PLAYER_QUIT)
+  playerQuit(player: PlayerMp, exitType: "disconnect" | "timeout" | "kicked", reason: string): void {
+    try {
+      mp.players.call(mp.players.toArray(), SHARED.EVENTS.SERVER_NOTIFY_CHAT, [SHARED.MSG.PLAYER_LEFT, player.name, exitType])
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
    * Format a message from the player
    * @param player 
    * @param text 
@@ -210,8 +256,58 @@ class PlayerManager extends EntityBase<PlayerMp> {
    * @param {string} message - a text message
    * @param {string} level - a level of notify
    */
-  notify(player: PlayerMp, message: string, level: SHARED.TYPES.NotifyVariantType = 'info'): void {
-    player.call(SHARED.EVENTS.SERVER_NOTIFY, [message, level])
+  notify(player: PlayerMp, message: string, level: SHARED.TYPES.NotifyVariantType = 'info', ...args: string[]): void {
+    player.call(SHARED.EVENTS.SERVER_NOTIFY, [message, level, ...args])
+  }
+
+  /**
+   * Calls a client event to notify about info to the player
+   * @param {PlayerMp} player 
+   * @param {string} message - a text message or message id
+   * @param {string[]} args - other args for message id
+   */
+  info(player: PlayerMp, message: string, ...args: string[]): void {
+    return this.notify(player, message, 'info', ...args)
+  }
+
+  /**
+   * Calls a client event to notify about error to the player
+   * @param {PlayerMp} player 
+   * @param {string} message - a text message or message id
+   * @param {string[]} args - other args for message id
+   */
+  error(player: PlayerMp, message: string, ...args: string[]): void {
+    return this.notify(player, message, 'error', ...args)
+  }
+
+  /**
+   * Calls a client event to notify about success to the player
+   * @param {PlayerMp} player 
+   * @param {string} message - a text message or message id
+   * @param {string[]} args - other args for message id
+   */
+  success(player: PlayerMp, message: string, ...args: string[]): void {
+    return this.notify(player, message, 'success', ...args)
+  }
+
+  /**
+   * Calls a client event to notify about warning to the player
+   * @param {PlayerMp} player 
+   * @param {string} message - a text message or message id
+   * @param {string[]} args - other args for message id
+   */
+  warning(player: PlayerMp, message: string, ...args: string[]): void {
+    return this.notify(player, message, 'warning', ...args)
+  }
+
+  /**
+   * Calls a client event to notify about default to the player
+   * @param {PlayerMp} player 
+   * @param {string} message - a text message or message id
+   * @param {string[]} args - other args for message id
+   */
+  default(player: PlayerMp, message: string, ...args: string[]): void {
+    return this.notify(player, message, 'default', ...args)
   }
 
   /**
@@ -219,22 +315,8 @@ class PlayerManager extends EntityBase<PlayerMp> {
    * @param {string} message - a text message
    * @param {string} level - a level of notify
    */
-  notifyAll(message: string, level: SHARED.TYPES.NotifyVariantType = 'info'): void {
-    mp.players.forEach(player => this.notify(player, message, level))
-  }
-
-  /**
-   * Notify all players by message id with player language
-   * @param {string} message - a message id
-   * @param {string} level - a level of notify
-   */
-  notifyLanguageChatAll(message: string, ...args: string[]): void {
-    mp.players.forEach(player => {
-      const lang = this.getLang(player)
-      const msgText = this.lang.get(lang, message, ...args)
-
-      player.outputChatBox(msgText)
-    })
+  notifyAll(message: string, level: SHARED.TYPES.NotifyVariantType = 'info', ...args: string[]): void {
+    mp.players.forEach(player => this.notify(player, message, level, ...args))
   }
 
   /**
@@ -282,13 +364,7 @@ class PlayerManager extends EntityBase<PlayerMp> {
 
     // check if player exists
     if (!player || !mp.players.exists(player)) {
-      if (notifiedPlayer) {
-        const message = this.lang.get(notifiedPlayer.sharedData.lang, SHARED.MSG.ERR_PLAYER_NOT_FOUND, playerId)
-        throw new NotFoundNotifyError(message, notifiedPlayer)
-      } else {
-        const message = this.lang.get('en', SHARED.MSG.ERR_PLAYER_NOT_FOUND, playerId)
-        throw new IsNotExistsError(message)
-      }
+      throw new NotFoundNotifyError(SHARED.MSG.ERR_PLAYER_NOT_FOUND, notifiedPlayer, playerId.toString())
     }
 
     return player
@@ -307,24 +383,12 @@ class PlayerManager extends EntityBase<PlayerMp> {
       .filter(player => player.name.match(regex))
 
     if (!players.length) {
-      if (notifiedPlayer) {
-        const message = this.lang.get(this.getLang(notifiedPlayer), SHARED.MSG.ERR_PLAYER_NOT_FOUND, name)
-        throw new InvalidArgumentNotify(message, notifiedPlayer)
-      } else {
-        const message = this.lang.get('en', SHARED.MSG.ERR_PLAYER_NOT_FOUND, name)
-        throw new IsNotExistsError(message)
-      }
+      throw new InvalidArgumentNotify(SHARED.MSG.ERR_PLAYER_NOT_FOUND, notifiedPlayer, name)
     }
 
     if (players.length > 1) {
       const names = players.map(player => player.name)
-      if (notifiedPlayer) {
-        const message = this.lang.get(this.getLang(notifiedPlayer), SHARED.MSG.ERR_TOO_MANY_PLAYERS, names.join(', '))
-        throw new InvalidArgumentNotify(message, notifiedPlayer)
-      } else {
-        const message = this.lang.get('en', SHARED.MSG.ERR_TOO_MANY_PLAYERS, names.join(', '))
-        throw new IsNotExistsError(message)
-      }
+      throw new InvalidArgumentNotify(SHARED.MSG.ERR_TOO_MANY_PLAYERS, notifiedPlayer, names.join(', '))
     }
 
     const [ player ] = players
@@ -372,6 +436,14 @@ class PlayerManager extends EntityBase<PlayerMp> {
     const ms = player.muted - Date.now()
 
     return Math.round(ms / (60 * 1000))
+  }
+
+  setPlayerTeam(player: PlayerMp, teamId: SHARED.TEAMS): void {
+    this.setTeam(player, teamId)
+    const skin = this.dummyConfig.getRandomSkin(teamId)
+
+    player.model = mp.joaat(skin)
+    this.spawnInLobby(player)
   }
 
   /**

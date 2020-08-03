@@ -26,9 +26,9 @@ class InteractionManager implements INTERFACES.Manager {
     readonly lang: DummyLanguageManager,
     readonly errHandler: ErrorHandler,
   ) {
-    this.teamSelectorInteraction = this.teamSelectorInteraction.bind(this)
-    this.playerSpawn = this.playerSpawn.bind(this)
-    this.toggleTeamChoice = this.toggleTeamChoice.bind(this)
+    this.teamSelectorInteraction    = this.teamSelectorInteraction.bind(this)
+    this.playerSpawn                = this.playerSpawn.bind(this)
+    this.toggleTeamChoice           = this.toggleTeamChoice.bind(this)
   }
 
   /**
@@ -79,22 +79,27 @@ class InteractionManager implements INTERFACES.Manager {
         this.playerManager.setCustomData('isSelecting', true)
       }
 
-      if (this.playerManager.getCustomData("isSelecting") === true) {
+      if (
+        this.playerManager.getCustomData("isSelecting") === true
+        && !this.teamSelector.active
+      ) {
         this.teamSelector.start()
       }
     } catch (err) {
-      print.error(err.stack)
+      if (this.errHandler.handle(err)) throw err
     }
   }
 
   /**
    * Event
    * 
-   * Fires when the player has spawned
+   * Fires when a player has just spawned in the lobby
    */
   @event(RageEnums.EventKey.PLAYER_SPAWN)
   playerSpawn(): void {
-    if (this.playerManager.getCustomData("isSelecting") === true) this.teamSelectorInteraction()
+    if (this.playerManager.getCustomData("isSelecting") === true) {
+      this.teamSelectorInteraction()
+    }
   }
 
   /**
