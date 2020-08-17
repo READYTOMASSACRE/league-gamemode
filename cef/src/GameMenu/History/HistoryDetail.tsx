@@ -48,10 +48,12 @@ export default function HistoryDetail(props: any) {
   const winnerSpan = winner
       ? <span>{lang.get(MSG.GAMEMENU_HISTORY_DETAIL_VICTORY, props[winner].name)}</span>
       : <span>Draw</span>
+
+  const winnerColor = winner ? props[winner].color : 'white'
   return (
     <React.Fragment>
       <br/>
-      <Typography style={{ fontSize: 32, color: props[winner].color }} variant="overline">{winnerSpan}</Typography><br/>
+      <Typography style={{ fontSize: 32, color: winnerColor }} variant="overline">{winnerSpan}</Typography><br/>
       <Typography variant="overline">{spanVictoryKill}, {created_at}</Typography><br/>
       <Table size="small">
         <TableHead>

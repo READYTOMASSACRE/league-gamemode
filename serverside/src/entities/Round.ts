@@ -103,7 +103,7 @@ class Round {
     if (this.roundTimer) clearTimeout(this.roundTimer)
 
     this.roundTimer           = undefined
-    this.roundTimeInterval    = this.roundTimeInterval - this.getTimeleftMs()
+    this.roundTimeInterval    = this.getTimeleftMs()
 
     this.players.forEach(player => player.call(SHARED.EVENTS.SERVER_ROUND_PAUSE, [true]))
   }
