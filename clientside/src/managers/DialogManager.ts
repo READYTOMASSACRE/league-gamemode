@@ -16,25 +16,13 @@ class DialogManager {
   ) {}
 
   /**
-   * Open the dialog by RPC_OPEN_DIALOG
+   * Call the dialog by RPC_OPEN_DIALOG with args
    * @param {SHARED.RPC_DIALOG} RPC_OPEN_DIALOG 
    * @param {any[]} args - params which whill be passed in to the dialog
    */
-  open(RPC_OPEN_DIALOG: SHARED.RPC_DIALOG, ...args: any[]) {
+  call(RPC_OPEN_DIALOG: SHARED.RPC_DIALOG, ...args: any[]) {
     try {
       this.browserManager.callBrowser(ENUMS.CEF.MAIN, RPC_OPEN_DIALOG, ...args)
-    } catch (err) {
-      if (!this.errHandler.handle(err)) throw err
-    }
-  }
-
-  /**
-   * Close the dialog by RPC_OPEN_DIALOG
-   * @param {SHARED.RPC_DIALOG} RPC_OPEN_DIALOG 
-   */
-  close(RPC_CLOSE_DIALOG: SHARED.RPC_DIALOG) {
-    try {
-      this.browserManager.callBrowser(ENUMS.CEF.MAIN, RPC_CLOSE_DIALOG)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }

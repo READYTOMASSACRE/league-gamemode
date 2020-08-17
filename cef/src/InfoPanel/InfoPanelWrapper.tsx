@@ -4,9 +4,10 @@ import { RPC_DIALOG } from '../events'
 import { register } from 'rage-rpc'
 
 const defaultTeam = {
-  name: 'unknown',
-  color: 'white',
-  players: []
+  name    : 'unknown',
+  color   : 'white',
+  players : [],
+  score   : 0,
 }
 const defaultTeams = {
   ATTACKERS: defaultTeam,
@@ -14,9 +15,7 @@ const defaultTeams = {
 }
 
 const defaultProps = {
-  time: '00:00',
-  arena: 'unknown',
-  team: defaultTeams
+  team: defaultTeams,
 }
 
 /**

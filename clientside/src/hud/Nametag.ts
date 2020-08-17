@@ -22,6 +22,7 @@ class Nametag extends Hud {
   static readonly MAX_DISTANCE = 2625
   static readonly VISIBLE_BIT_MAP = 1 | 16 | 256
 
+  private cam?              : CameraMp
   private _healthParams?    : HealthParams
   private _colorGradient?   : [RGB, RGB]
   private player            = mp.players.local
@@ -35,6 +36,7 @@ class Nametag extends Hud {
 
     mp.nametags.enabled    = false
     this.maxDistance       = MAX_DISTANCE || Nametag.MAX_DISTANCE
+    this.cam               = mp.cameras.new('gameplay')
   }
 
   /**
@@ -120,10 +122,11 @@ class Nametag extends Hud {
    * @param {PlayerMp} player 
    */
   private isVisible(player: PlayerMp) : boolean {
-    const localPlayerHead   = this.player.getBoneCoords(ENUMS.BONES.IK_Head, 0, 0, 0)
-    const playerHead        = player.getBoneCoords(ENUMS.BONES.IK_Head, 0, 0, 0)
+    if (!this.cam) return false
+    const localPlayerGameCam = this.cam.getCoord()
+    const playerHead = player.getBoneCoords(ENUMS.BONES.IK_Head, 0, 0, 0)
 
-    return !mp.raycasting.testPointToPoint(localPlayerHead, playerHead, undefined, Nametag.VISIBLE_BIT_MAP)
+    return !mp.raycasting.testPointToPoint(localPlayerGameCam, playerHead, undefined, Nametag.VISIBLE_BIT_MAP)
   }
 
   /**

@@ -42,7 +42,7 @@ export interface DeathlogProps {
 export default function Deathlog(props: DeathlogProps) {
   const { checked, killer, victim, weapon } = props
 
-  const classes = useStyles(props)
+  const classes = useStyles()
   const src = `/assets/weapons/${weapon}.webp`
 
   return (

@@ -62,6 +62,8 @@
   "DAMAGE_RECEIVED"                   : "Damage received",
   "PING"                              : "Ping",
 
+  "DEATH_TEXT"                        : "You died",
+
   "IDLE"                              : "Idle",
   "SELECT"                            : "Select",
   "ALIVE"                             : "Alive",
@@ -79,9 +81,11 @@
 
   "ROUND_START_MESSAGE"               : "%s - Round has started",
   "ROUND_STOP_MESSAGE"                : "Round has finished",
+  "ROUND_START_EFFECT_TEXT"           : "%s is starting in [%s]",
   "ROUND_PAUSED_MESSAGE"              : "Paused",
   "ROUND_ADD_TO_ROUND_SUCCESS"        : "%s has been added to the round successfuly",
   "ROUND_REMOVE_FROM_ROUND_SUCCESS"   : "%s has been removed from the round successfuly",
+  "ROUND_WINNING_TEXT"                : "%s victory!",
 
   "GROUP_LOGIN_SUCCESS"               : "!{lightgreen}Successfuly logged as %s",
   "GROUP_LOGIN_FAILURE"               : "!{brown}Invalid password to login as %s",
@@ -119,6 +123,10 @@
   "GAMEMENU_HISTORY_TD_RESULT"        : "Result",
   "GAMEMENU_HISTORY_TD_DATE"          : "Date",
   "GAMEMENU_HISTORY_TD_KDA"           : "KDA",
+  "GAMEMENU_HISTORY_TD_NAME"          : "Name",
+
+  "GAMEMENU_HISTORY_DETAIL_EMPTY"     : "Empty",
+  "GAMEMENU_HISTORY_DETAIL_VICTORY"   : "%s is victory!",
 
   "GAMEMENU_VOTE"                     : "Vote",
   "GAMEMENU_VOTE_LABEL"               : "Find map",
@@ -126,5 +134,6 @@
   "GAMEMENU_VOTE_NOMINATE"            : "Nominate",
 
   "GAMEMENU_TOP"                      : "Top 100",
-  "GAMEMENU_CREDITS"                  : "Changelog & Credits"
+  "GAMEMENU_CREDITS"                  : "Changelog & Credits",
+  "GAMEMENU_REFRESH_BTN"              : "Refresh"
 }

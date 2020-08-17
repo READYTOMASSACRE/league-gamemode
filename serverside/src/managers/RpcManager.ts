@@ -7,8 +7,9 @@ import { DEBUG } from "../bootstrap"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { RoundIsNotRunningError } from "../errors/PlayerErrors"
 import { PlayerProfileManager } from "./PlayerProfileManager"
-import { CEFProfileDTO } from "../db/domains/PlayerProfile"
 import { RoundStatManager } from "./RoundStatManager"
+import { CEFProfileDTO } from "../db/entity/Profile"
+import { ObjectID } from "typeorm"
 
 /**
  * Class to manage RPC class
@@ -142,9 +143,20 @@ class RpcManager implements INTERFACES.Manager {
    * 
    * Fires from CEF when a client has requested a top of players
    */
-  cefGamemenuTop(_: any, listener: rpc.ProcedureListenerInfo): any {
+  async cefGamemenuTop(_: any, listener: rpc.ProcedureListenerInfo): Promise<any> {
     try {
-      return { players: [] }
+      if (this.profileManager.repository) {
+        const players = await this.profileManager.repository.getTopPlayers()
+        return {
+          players: players.map((ppl, index) => ({
+            id: index,
+            name: ppl.state.name,
+            mmr: ppl.state.mmr,
+          }))
+        }
+      } else {
+        return { players: [] }
+      }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -157,11 +169,21 @@ class RpcManager implements INTERFACES.Manager {
    * @param {number} id 
    * @param {rpc.ProcedureListenerInfo} listener 
    */
-  async cefGamemenuHistory(_: any, listener: rpc.ProcedureListenerInfo): Promise<any> {
+  async cefGamemenuHistory(id: ObjectID | null = null, listener: rpc.ProcedureListenerInfo): Promise<any> {
     const { player }  = listener
-    const matches     = await this.roundStatManager.getMatchesLastWeek(player as PlayerMp)
+    if (id) {
+      if (!this.roundStatManager.repository) return {}
 
-    return { matches }
+      const round = await this.roundStatManager.repository.getMatchById(id)
+
+      if (typeof round === 'undefined') return {}
+
+      return this.roundStatManager.formatCefMatchDetail(player as PlayerMp, round.state)
+    } else {
+      const matches = await this.roundStatManager.getMatchesLastWeek(player as PlayerMp)
+
+      return { matches }
+    }
   }
 
   /**

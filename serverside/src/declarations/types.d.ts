@@ -24,24 +24,13 @@ declare namespace TYPES {
     normalize(dest?: Vector2): Vector2
   }
 
-  // /**
-  //  * Playercustom
-  //  */
-  // type PlayerCustomData = {
-  //   rollbackVector: Vector2
-  //   rollbackPosition: Vector3Mp
-  //   isSelecting: boolean
-  // }
-
   /**
    * Command callable type
    */
   type CommandCallable = (player: PlayerMp, fullText: string, ...args: string[]) => void
 
   /**
-   * Types of pouchdb records
+   * Types of records
    */
-  type PouchDbRecord          = { _id: string, _rev?: string }
-  type PlayerProfileRecord    = SHARED.TYPES.PlayerProfileDTO & { _id: string }
-  type RoundStatRecord        = SHARED.TYPES.RoundStatDTO & { _id: number }
+  type RoundStatRecord        = SHARED.TYPES.RoundStatDTO & { id: number }
 }

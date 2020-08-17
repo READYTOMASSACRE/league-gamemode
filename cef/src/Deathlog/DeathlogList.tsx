@@ -39,7 +39,7 @@ export default function DeathlogList() {
       register(RPC.CLIENT_DEATHLOG, ([ deathlog ]) => {
         const created = Date.now()
         const newItem: DeathlogItem = {...deathlog, ...{ id: created, created, checked: true }}
-        setItems([...items, newItem])
+        setItems(items => items.concat(newItem))
       })
     }
   }, [render, items])
@@ -61,7 +61,7 @@ export default function DeathlogList() {
       } else {
         const visibleItems = items.filter(item => item.checked)
         if (visibleItems.length !== items.length) {
-          setItems(visibleItems)
+          setItems(items => items.filter(item => item.checked))
         }
       }
     }

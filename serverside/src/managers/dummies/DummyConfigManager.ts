@@ -27,7 +27,9 @@ class DummyConfigManager implements INTERFACES.Manager {
       SERVER_NAME           : mp.config.name,
       LOBBY                 : this.config.get('LOBBY'),
       TEAMS                 : this.config.get('TEAMS'),
+      WEAPONS               : this.config.get('WEAPONS'),
       WEAPON_SET            : this.weaponManager.weaponSet,
+      WEAPON_DAMAGE         : this.config.get('WEAPON_DAMAGE'),
       TEAM_SELECTOR         : this.config.get('TEAM_SELECTOR'),
       LANGUAGE              : this.config.get('LANGUAGE'),
       ROUND_TIME_INTERVAL   : this.config.get('ROUND_TIME_INTERVAL_MINUTES'),
@@ -35,6 +37,7 @@ class DummyConfigManager implements INTERFACES.Manager {
       HUD                   : this.config.get('HUD'),
       GAMEMODE              : Application.GAMEMODE,
       VERSION               : Application.VERSION,
+      EFFECTS               : this.config.get('EFFECTS'),
     })
   }
 
@@ -60,6 +63,13 @@ class DummyConfigManager implements INTERFACES.Manager {
     if (!this._dummy) throw new IsNotExistsError("Dummy not found")
 
     return this._dummy
+  }
+
+  /**
+   * Get an effects
+   */
+  getEffects(): SHARED.TYPES.EffectsConfig {
+    return this.dummy.data.EFFECTS
   }
 }
 

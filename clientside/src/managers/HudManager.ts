@@ -10,9 +10,14 @@ import { TeamSelecting } from "../hud/TeamSelecting"
 import { DialogManager } from "./DialogManager"
 import { BrowserManager } from "./BrowserManager"
 import { PlayerManager } from "./PlayerManager"
-import { getFormattedCurrentTime, keyBind, print } from "../utils"
+import { getFormattedCurrentTime, keyBind, print, keyUnbind } from "../utils"
 import { Gamemode } from "../hud/Gamemode"
 import { Controls } from "../hud/Controls"
+import { Damage } from "../hud/Damage"
+import { RoundStart } from "../hud/effects/RoundStart"
+import { Hud } from "../hud/Hud"
+import { RoundStop } from "../hud/effects/RoundStop"
+import { Death } from "../hud/effects/Death"
 
 /**
  * Class to manage the hud elements
@@ -21,13 +26,21 @@ import { Controls } from "../hud/Controls"
 @eventable()
 @autoInjectable()
 class HudManager {
+  static readonly INTERVAL  : number = 300
+
   readonly roundInfo        : RoundInfo
   readonly teamSelecting    : TeamSelecting
   readonly votemapNotify    : VotemapNotify
   readonly gamemode         : Gamemode
   readonly controls         : Controls
+  readonly damage           : Damage
+  readonly roundStartEffect : RoundStart
+  readonly roundStopEffect  : RoundStop
+  readonly deathEffect      : Death
 
   private nametag           : Nametag
+  private tickableHuds      : Hud[]
+  private interval?         : NodeJS.Timeout
 
   constructor(
     readonly dummyConfig    : DummyConfigManager,
@@ -43,14 +56,29 @@ class HudManager {
     this.teamSelecting        = new TeamSelecting(this.dummyConfig, this.lang, this.errHandler)
     this.gamemode             = new Gamemode(this.dummyConfig, this.lang, this.errHandler)
     this.controls             = new Controls(this.dummyConfig, this.lang, this.errHandler)
+    this.damage               = new Damage(this.dummyConfig, this.lang, this.errHandler)
+    this.roundStartEffect     = new RoundStart(this.dummyConfig, this.lang, this.errHandler)
+    this.roundStopEffect      = new RoundStop(this.dummyConfig, this.lang, this.errHandler, this.dialogManager)
+    this.deathEffect          = new Death(this.dummyConfig, this.lang, this.errHandler, this.dialogManager)
 
     this.hudInit              = this.hudInit.bind(this)
+    this.hudRemove            = this.hudRemove.bind(this)
     this.votemapStart         = this.votemapStart.bind(this)
     this.votemapUpdate        = this.votemapUpdate.bind(this)
     this.serverNotify         = this.serverNotify.bind(this)
     this.serverNotifyError    = this.serverNotifyError.bind(this)
     this.deathLog             = this.deathLog.bind(this)
     this.serverNotifyChat     = this.serverNotifyChat.bind(this)
+    this.damageNotify         = this.damageNotify.bind(this)
+    this.toggleGameMenu       = this.toggleGameMenu.bind(this)
+    this.tick                 = this.tick.bind(this)
+
+    this.tickableHuds         = [
+      this.roundInfo,
+      this.votemapNotify,
+      this.damage,
+      this.roundStartEffect,
+    ]
   }
 
   /**
@@ -63,8 +91,34 @@ class HudManager {
     this.nametag.start()
     this.gamemode.start()
     this.controls.start()
+    this.roundInfo.start()
 
     this.bindKeys()
+
+    this.interval = setInterval(this.tick, HudManager.INTERVAL)
+  }
+
+
+  /**
+   * Event
+   * 
+   * Fires when player has left from the server
+   */
+  @event(RageEnums.EventKey.PLAYER_QUIT)
+  private hudRemove(player: PlayerMp): void {
+    if (player.handle === mp.players.local.handle) {
+      this.nametag.stop()
+      this.gamemode.stop()
+      this.controls.stop()
+      this.roundInfo.stop()
+  
+      this.unbindKeys()
+
+      if (this.interval) {
+        clearInterval(this.interval)
+        this.interval = undefined
+      }
+    }
   }
 
   /**
@@ -166,6 +220,24 @@ class HudManager {
   }
 
   /**
+   * Event
+   * 
+   * Fires when the targetPlayer has received a damage
+   * @param {number} weapon 
+   * @param {number} damage 
+   * @param {number} distance 
+   */
+  @event(SHARED.EVENTS.SERVER_DAMAGE_NOTIFY)
+  damageNotify(damageParams: string): void {
+    try {
+      const { weapon, damage, distance } = JSON.parse(damageParams)
+      this.damage.addOutcomingDamage({ weapon, damage, distance })
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
    * Notify a player
    * 
    * @param {string} message - text message
@@ -191,9 +263,37 @@ class HudManager {
    * Bind keys to communicate with forms
    */
   bindKeys(): void {
-    keyBind([ENUMS.KEYCODES.VK_F2], false, () => {
-      this.dialogManager.toggle(SHARED.RPC_DIALOG.CLIENT_GAMEMENU_TOGGLE)
-    })
+    keyBind([ENUMS.KEYCODES.VK_F2], false, this.toggleGameMenu)
+  }
+
+  /**
+   * Unbind keys to communicate with forms
+   */
+  unbindKeys(): void {
+    keyUnbind([ENUMS.KEYCODES.VK_F2], false, this.toggleGameMenu)
+  }
+
+  /**
+   * Toggle gamemenu
+   */
+  private toggleGameMenu(): void {
+    this.dialogManager.toggle(SHARED.RPC_DIALOG.CLIENT_GAMEMENU_TOGGLE)
+  }
+
+  /**
+   * Observable main process of any hud element which shoudl be updated
+   */
+  private tick(): void {
+    this.tickableHuds
+      .filter(hudElement => !hudElement.isStopped)
+      .forEach(hudElement => {
+        try {
+          hudElement.tick()
+        } catch (err) {
+          if (this.errHandler.handle(err)) throw err
+          hudElement.stopTick()
+        }
+      })
   }
 }
 

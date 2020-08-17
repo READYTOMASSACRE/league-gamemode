@@ -12,10 +12,7 @@ export class DomainConverter {
    * @param {any} dto 
    */
   static fromDto<T>(domain: Type<T>, dto: any): T {
-    const instance = Object.create(domain.prototype)
-    instance.state = dto
-
-    return instance
+    return new domain(dto)
   }
 
   /**

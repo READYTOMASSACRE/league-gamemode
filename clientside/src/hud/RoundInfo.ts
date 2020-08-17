@@ -4,18 +4,19 @@ import { ErrorHandler } from "../core/ErrorHandler"
 import deepmerge from 'deepmerge'
 
 export type InfoPanel = {
-  time: string
-  arena: string
+  round?: {
+    time?: string
+    arena?: string
+  }
   team: {
     [key in Exclude<SHARED.TEAMS, SHARED.TEAMS.SPECTATORS>]: {
       name: string
       color: string
       players: number[]
+      score: number
     }
   }
 }
-
-const DELAY_INSPECT = 1000
 
 /**
  * Hud element - RoundInfo
@@ -44,33 +45,47 @@ class RoundInfo extends Hud {
   /**
    * @inheritdoc
    */
-  start(payload: Partial<InfoPanel>, roundIntervalMs: number): void {
-    this.roundStartDate = Date.now()
-    this.roundSecondInterval = Math.round(roundIntervalMs / 1000)
+  prepare(): void {
+    const att = this.dummyConfig.getTeam(SHARED.TEAMS.ATTACKERS)
+    const def = this.dummyConfig.getTeam(SHARED.TEAMS.DEFENDERS)
 
-    this.resetRoundInterval()
+    this.update({
+      team: {
+        ATTACKERS: {
+          name: att.NAME,
+          color: att.COLOR,
+          players: [],
+          score: 0,
+        },
+        DEFENDERS: {
+          name: def.NAME,
+          color: def.COLOR,
+          players: [],
+          score: 0,
+        }
+      }
+    })
+  }
 
-    this.update(payload)
-    
-    // set up observable function per RoundInfo.SECOND
-    this.tick(() => this.tickUpdate())
-
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, true)
+  /**
+   * @inheritdoc
+   */
+  start(): void {
+    this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, true)
   }
 
   /**
    * @inheritdoc
    */
   stop(): void {
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, false)
-    this.roundStartDate = 0
+    this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_INFOPANEL_TOGGLE, false)
     this.stopTick()
   }
 
   /**
    * Update the state of round info panel
    */
-  tickUpdate(): void {
+  tick(): void {
     this.updateRoundTimeleft()
 
     const updatePlayerHealths: any = {
@@ -79,9 +94,35 @@ class RoundInfo extends Hud {
     }
 
     this.update({
-      time: this.formatTimeRemaining(),
+      round: { time: this.formatTimeRemaining() },
       team: updatePlayerHealths
     })
+  }
+
+  /**
+   * Set watchers when a round starts
+   */
+  roundStart(payload: Partial<InfoPanel>, timePassedMs: number): void {
+    this.roundStartDate         = Date.now()
+    this.roundSecondInterval    = Math.round(timePassedMs / 1000)
+
+    this.update(payload)
+    this.startTick()
+  }
+
+  /**
+   * Remove watchers when a round starts
+   */
+  roundStop(): void {
+    this.roundStartDate = 0
+    this.stopTick()
+    if (this.state) {
+      const team = this.state.team
+      team.ATTACKERS.players = []
+      team.DEFENDERS.players = []
+
+      this.update({ round: undefined, team })
+    }
   }
 
   /**
@@ -97,6 +138,21 @@ class RoundInfo extends Hud {
       this.browserManager.callBrowser(ENUMS.CEF.MAIN, SHARED.RPC.CLIENT_INFOPANEL_DATA, this.state)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Update team score
+   * @param {Exclude<SHARED.TEAMS, SHARED.TEAMS.SPECTATORS>} teamId 
+   * @param {number} score 
+   */
+  updateTeamScore(teamId: Exclude<SHARED.TEAMS, SHARED.TEAMS.SPECTATORS>, score: number): void {
+    if (this.state) {
+      const team = this.state.team
+
+      team[teamId].score = score
+
+      this.update({ team })
     }
   }
 
@@ -119,7 +175,7 @@ class RoundInfo extends Hud {
   stopPause(): void {
     mp.events.remove(RageEnums.EventKey.RENDER, this.drawPause)
     this.roundStartDate = Date.now()
-    this.tick(() => this.tickUpdate())
+    this.startTick()
   }
 
   /**
@@ -153,18 +209,18 @@ class RoundInfo extends Hud {
    */
   private getDefaultState(): InfoPanel {
     return {
-      time: '00:00',
-      arena: 'unknown',
       team: {
         ATTACKERS: {
           color: 'white',
           name: 'unkown',
           players: [],
+          score: 0,
         },
         DEFENDERS: {
           color: 'white',
           name: 'unkown',
           players: [],
+          score: 0,
         },
       }
     }
@@ -178,10 +234,6 @@ class RoundInfo extends Hud {
     const seconds = this.remaining - (minutes * 60)
 
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2,'0')}`
-  }
-
-  private resetRoundInterval(): void {
-    this.roundSecondInterval = this.dummyConfig.getRoundIntervalMinutes() * 60
   }
 
   /**

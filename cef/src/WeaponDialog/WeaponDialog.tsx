@@ -1,9 +1,6 @@
 import React from 'react'
-import Dialog from '@material-ui/core/Dialog'
-import Button from '@material-ui/core/Button'
 import Typography from '@material-ui/core/Typography'
 import DialogActions from '@material-ui/core/DialogActions'
-import DialogContent from '@material-ui/core/DialogContent'
 import DialogTitle from '@material-ui/core/DialogTitle'
 
 import WeaponList from './WeaponList'
@@ -11,6 +8,9 @@ import { RPC, RPC_DIALOG } from '../events'
 import { register, callServer, callClient } from 'rage-rpc'
 import { lang } from '../lib/Language'
 import { MSG } from '../messages'
+import { StyledDialogComponent, StyledDialogContent } from '../Theme/Dark/DialogComponents'
+import { StyledButton } from '../Theme/Dark/ButtonComponents'
+import WeaponImgChoose from './WeaponImgChoose'
 
 function WeaponDialog() {
   // register setState handlers
@@ -68,8 +68,18 @@ function WeaponDialog() {
     }
   }, [hasRendered])
 
+  let imgList: any = []
+  if (choice.length) {
+    imgList = choice.map((name, index) => {
+      const weaponName = name.replace(/weapon_/, '')
+      const src = `/assets/weapons/${weaponName}.webp`
+
+      return <WeaponImgChoose key={index} thumbUrl={src} />
+    })
+  }
+
   return (
-    <Dialog
+    <StyledDialogComponent
       disableBackdropClick={!!items[step]}
       disableEscapeKeyDown={!!items[step]}
       onClose={handleClose}
@@ -80,16 +90,17 @@ function WeaponDialog() {
         <Typography gutterBottom>
           {lang.get(MSG.WEAPON_CHOOSE_TEXT, (step+1).toString())}
         </Typography>
+        {imgList}
       </DialogTitle>
-      <DialogContent dividers>
+      <StyledDialogContent dividers>
         <WeaponList list={items[step] || [] as string[]} handleClick={handleChoiceClick} choice={choice}/>
-      </DialogContent>
+      </StyledDialogContent>
       <DialogActions>
-        <Button autoFocus variant="outlined" onClick={prevStep} disabled={!!!choice.length}>
+        <StyledButton autoFocus variant="outlined" onClick={prevStep} disabled={!!!choice.length}>
           Назад
-        </Button>
+        </StyledButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialogComponent>
   )
 }
 

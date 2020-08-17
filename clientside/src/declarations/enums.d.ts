@@ -5,7 +5,7 @@ declare namespace ENUMS {
   const enum CEF {
     MAIN = 'package://cef/index.html'
     // MAIN = 'http://localhost:3000'
-    // MAIN = 'http://192.168.0.102:3000/'
+    // MAIN = 'http://192.168.0.100:3000/'
   }
 
   /**

@@ -18,6 +18,7 @@ export type NominateMaps = {
 class VotemapNotify extends Hud {
   static readonly SECOND = 1000
 
+  private voteStart         : number = 0
   private secondInterval    : number  = 0
   private state             : NominateMaps = {}
 
@@ -26,13 +27,10 @@ class VotemapNotify extends Hud {
    */
   start(): void {
     this.secondInterval = this.dummyConfig.getVoteIntervalSeconds()
+    this.voteStart      = Date.now()
 
     mp.events.add(RageEnums.EventKey.RENDER, this.render)
-
-    this.tick(() => {
-      this.secondInterval -= 1
-      if (this.secondInterval < 0) this.stop()
-    })
+    this.startTick()
   }
 
   /**
@@ -41,6 +39,17 @@ class VotemapNotify extends Hud {
   stop(): void {
     mp.events.remove(RageEnums.EventKey.RENDER, this.render)
     this.stopTick()
+  }
+
+  /**
+   * @inheritdoc
+   */
+  tick(): void {
+    const pausedDate      = Date.now()
+    const timePassed      = Math.round((pausedDate - this.voteStart) / 1000)
+
+    this.secondInterval   = this.secondInterval - timePassed
+    if (this.secondInterval < 0) this.stop()
   }
 
   /**

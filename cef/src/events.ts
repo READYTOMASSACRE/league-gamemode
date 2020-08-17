@@ -26,6 +26,8 @@ export enum RPC_DIALOG {
   CLIENT_INFOPANEL_DATA       = 'CEF.infopanel.data',
   CLIENT_NOTIFY_NOTISTACK     = 'CEF.notify.notistack',
   CLIENT_GAMEMENU_TOGGLE      = 'CEF.gamemenu.toggle',
+  CLIENT_NOTIFY_ROUND_END     = 'CEF.notify.round.end',
+  CLIENT_NOTIFY_DEATH         = 'CEF.notify.death',
 }
 
 export const registerGlobalEvents = () => {

@@ -2,6 +2,7 @@ import { callBrowser } from "rage-rpc"
 import { print } from "./print"
 import { format } from 'util'
 import { errorHandler } from "../bootstrap"
+import { weapons } from "../declarations/weapons"
 
 /**
  * object.padding(number, string)
@@ -105,4 +106,12 @@ function getFormattedCurrentTime(): string {
   return `${hours}:${minutes}:${seconds}`
 }
 
-export { keyBind, keyUnbind, logbrowser, hex2rgba, colorGradient, getFormattedCurrentTime }
+/**
+ * Return a weapon's name
+ * @param {RageEnums.Hashes.Weapon} hash 
+ */
+function getWeaponName(hash: RageEnums.Hashes.Weapon): string {
+  return weapons[hash]
+}
+
+export { keyBind, keyUnbind, logbrowser, hex2rgba, colorGradient, getFormattedCurrentTime, getWeaponName }

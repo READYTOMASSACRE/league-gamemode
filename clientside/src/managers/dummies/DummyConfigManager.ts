@@ -1,7 +1,6 @@
 import { Dummy } from "../../entities/Dummy"
 import { singleton, injectable } from "tsyringe"
 import { ErrorHandler } from "../../core/ErrorHandler"
-import { print } from "../../utils"
 
 /**
  * A manager to handle dummies
@@ -92,6 +91,13 @@ class DummyConfigManager {
   }
 
   /**
+   * Get a damage nametag config
+   */
+  getDamageHudConfig(): SHARED.TYPES.DamageConfig {
+    return this.dummy.data.HUD.DAMAGE
+  }
+
+  /**
    * Get a gamemode name
    */
   getGamemode(): string {
@@ -103,6 +109,34 @@ class DummyConfigManager {
    */
   getGamemodeVersion(): string {
     return this.dummy.data.VERSION
+  }
+
+  /**
+   * Get a damage config
+   */
+  getDamageConfig(): SHARED.TYPES.WeaponDamageConfig {
+    return this.dummy.data.WEAPON_DAMAGE
+  }
+
+  /**
+   * Get weapons
+   */
+  getWeapons() {
+    return this.dummy.data.WEAPONS
+  }
+
+  /**
+   * Get round start effect options
+   */
+  getRoundStartEffect() {
+    return this.dummy.data.EFFECTS.ROUND
+  }
+
+  /**
+   * Get death effect options
+   */
+  getDeathEffect() {
+    return this.dummy.data.EFFECTS.DEATH
   }
 
   /**

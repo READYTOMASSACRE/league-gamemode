@@ -13,6 +13,7 @@ import { SharedDataValidator } from "../entities/validators/SharedDataValidator"
 import { NotFoundNotifyError, InvalidArgumentNotify } from "../errors/PlayerErrors"
 import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 import { weapons } from "../declarations/weapons"
+import { InvalidArgument } from "../errors/LogErrors"
 
 /**
  * Class to manage interactions with the players
@@ -34,13 +35,14 @@ class PlayerManager extends EntityBase<PlayerMp> {
   ) {
     super()
 
-    this.playerReady    = this.playerReady.bind(this)
-    this.playerDeath    = this.playerDeath.bind(this)
-    this.spawnInLobby   = this.spawnInLobby.bind(this)
-    this.setSharedData  = this.setSharedData.bind(this)
-    this.playerChat     = this.playerChat.bind(this)
-    this.playerJoin     = this.playerJoin.bind(this)
-    this.playerQuit     = this.playerQuit.bind(this)
+    this.playerReady          = this.playerReady.bind(this)
+    this.playerDeath          = this.playerDeath.bind(this)
+    this.clientPlayerDeath    = this.clientPlayerDeath.bind(this)
+    this.spawnInLobby         = this.spawnInLobby.bind(this)
+    this.setSharedData        = this.setSharedData.bind(this)
+    this.playerChat           = this.playerChat.bind(this)
+    this.playerJoin           = this.playerJoin.bind(this)
+    this.playerQuit           = this.playerQuit.bind(this)
   }
 
   /**
@@ -74,20 +76,54 @@ class PlayerManager extends EntityBase<PlayerMp> {
    * @param {PlayerMp} player 
    */
   @event(RageEnums.EventKey.PLAYER_DEATH)
-  playerDeath(player: PlayerMp, reason: number, killer: PlayerMp): void {
+  playerDeath(player: PlayerMp, reason: number, killer?: PlayerMp): void {
     try {
-      if (this.hasState(killer, [SHARED.STATE.ALIVE])) {
-        const { COLOR: playerColor } = this.dummyConfig.getTeamData(player.sharedData.teamId)
-        const { COLOR: killerColor } = this.dummyConfig.getTeamData(killer.sharedData.teamId)
-
-        const playerData = { name: player.name, color: playerColor }
-        const killerData = { name: killer.name, color: killerColor }
-        mp.players.forEach(ppl => ppl.call(SHARED.EVENTS.SERVER_DEATHLOG, [playerData, weapons[reason] || "", killerData]))
-      }
-
+      this.playerDeathHandle(player, reason, killer)
       return this.spawnInLobby(player)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires an event when player is dead with configurable damage weapon
+   * @param {PlayerMp} player victim, the player who died
+   * @param {number}   reason cause hash of death
+   * @param {PlayerMp} killer who killed the player
+   */
+  @event(SHARED.EVENTS.CLIENT_PLAYER_DEATH)
+  clientPlayerDeath(player: PlayerMp, deathParams: string): void {
+    try {
+      const { killerId, reason }  = JSON.parse(deathParams)
+      const playerAt              = mp.players.at(killerId)
+      const killer                = mp.players.exists(playerAt) ? playerAt : undefined
+
+      this.playerDeathHandle(player, reason, killer)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Handle a player's death
+   * @param {PlayerMp} player 
+   * @param {number} reason 
+   * @param {PlayerMp} killer (optional)
+   */
+  playerDeathHandle(player: PlayerMp, reason: number, killer?: PlayerMp): void {
+    if (
+      killer
+      && mp.players.exists(killer)
+      && this.hasState(killer, [SHARED.STATE.ALIVE])
+    ) {
+      const { COLOR: playerColor } = this.dummyConfig.getTeamData(player.sharedData.teamId)
+      const { COLOR: killerColor } = this.dummyConfig.getTeamData(killer.sharedData.teamId)
+
+      const playerData = { name: player.name, color: playerColor }
+      const killerData = { name: killer.name, color: killerColor }
+      mp.players.forEach(ppl => ppl.call(SHARED.EVENTS.SERVER_DEATHLOG, [playerData, weapons[reason] || "", killerData]))
     }
   }
 
@@ -208,12 +244,46 @@ class PlayerManager extends EntityBase<PlayerMp> {
   @event(RageEnums.EventKey.PLAYER_QUIT)
   playerQuit(player: PlayerMp, exitType: "disconnect" | "timeout" | "kicked", reason: string): void {
     try {
+      console.debug('Player exit', exitType, reason)
       mp.players.call(mp.players.toArray(), SHARED.EVENTS.SERVER_NOTIFY_CHAT, [SHARED.MSG.PLAYER_LEFT, player.name, exitType])
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
   }
 
+  /**
+   * Event
+   * 
+   * Fires when a player has taken a damage
+   * Send a notify to clientside by id
+   * @param {PlayerMp} player 
+   * @param {number} id - target player, who has shot
+   * @param {string} damageParams - json data
+   */
+  @event(SHARED.EVENTS.CLIENT_DAMAGE_REQUEST_NOTIFY)
+  damageRequestNotify(player: PlayerMp, id: number, damageParams: string): void {
+    try {
+      const player = mp.players.at(id)
+
+      if (mp.players.exists(player)) {
+        const { weapon, damage, distance } = JSON.parse(damageParams)
+        if (
+          typeof weapon === 'number'
+          && typeof damage === 'number'
+          && (
+            typeof distance === 'number'
+            || typeof distance === 'undefined'
+          )
+        ) {
+          player.call(SHARED.EVENTS.SERVER_DAMAGE_NOTIFY, [damageParams])
+        } else {
+          throw new InvalidArgument("Invalid data from clientside")
+        }
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
   /**
    * Format a message from the player
    * @param player 

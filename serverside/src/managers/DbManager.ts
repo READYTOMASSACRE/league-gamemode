@@ -1,9 +1,11 @@
-import { singleton, injectable, inject, container } from "tsyringe"
+import { singleton, injectable, container } from "tsyringe"
 import { Config } from "../core/Config"
-import * as pouchdb from 'pouchdb'
-import * as pouchdbUpsert from 'pouchdb-upsert'
 import { statSync } from "fs"
 import { resolve } from 'path'
+import { createConnection, Connection } from 'typeorm'
+import { ErrorHandler } from "../core/ErrorHandler"
+import { logMethod } from "../utils"
+import { DEBUG } from "../bootstrap"
 
 /**
  * Class to manage database connection
@@ -11,60 +13,49 @@ import { resolve } from 'path'
 @singleton()
 @injectable()
 class DbManager implements INTERFACES.Manager {
-  static readonly REPLICA_ENABLE    = false
-  static readonly REPLICA_URL       = 'http://localhost:5984/'
-  static readonly OPTIONS = {
-    auto_compaction                 : true,
-    revs_limit                      : 3,
-    adapter                         : 'leveldb',
-  }
-
-  private dbPath                    : string
-
-  private playersDb?                : PouchDB.Database
-  private roundsDb?                 : PouchDB.Database
-
-  constructor(@inject(Config) private readonly config: Config) {
-    this.dbPath = this.config.get("DB_PATH")
-  }
+  constructor(
+    readonly config: Config,
+    readonly errHandler: ErrorHandler,
+  ) {}
 
   /**
    * Load the database
    */
-  load(): boolean {
-    pouchdb.plugin(pouchdbUpsert)
-    this.playersDb = new pouchdb(this.getAbsolutePath() + '\\' + ENUMS.COLLECTIONS.PLAYERS, DbManager.OPTIONS)
-    this.roundsDb  = new pouchdb(this.getAbsolutePath() + '\\' + ENUMS.COLLECTIONS.ROUNDS, DbManager.OPTIONS)
+  @logMethod(DEBUG)
+  async load(): Promise<boolean> {
+    try {
+      const dbConfig = this.config.get('DB')
+      if (dbConfig) {
+        const connection = await createConnection({
+          type: 'mongodb',
+          host: dbConfig.HOSTNAME,
+          port: dbConfig.PORT,
+          username: dbConfig.USERNAME,
+          password: dbConfig.PASSWORD,
+          database: dbConfig.DATABASE,
+          entities: [ this.getEntitiesFolder() ],
+          useUnifiedTopology: true,
+          synchronize: true,
+        })
 
-    if (DbManager.REPLICA_ENABLE) this.setReplica()
-    
-    container.register(ENUMS.COLLECTIONS.PLAYERS, { useValue: this.playersDb })
-    container.register(ENUMS.COLLECTIONS.ROUNDS, { useValue: this.roundsDb })
+        container.register(Connection, { useValue: connection })
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
 
     return true
   }
 
   /**
-   * Set the replica to REPLICA_URL
-   */
-  setReplica(): void {
-    if (this.playersDb) {
-      this.playersDb.replicate.to(DbManager.REPLICA_URL + ENUMS.COLLECTIONS.PLAYERS, { live: true })
-    }
-    if (this.roundsDb) {
-      this.roundsDb.replicate.to(DbManager.REPLICA_URL + ENUMS.COLLECTIONS.ROUNDS, { live: true })
-    }
-  }
-
-  /**
    * Get an absolute path to database
    */
-  private getAbsolutePath(): string {
-    const path = resolve(this.dbPath)
+  private getEntitiesFolder(): string {
+    const path = resolve(__dirname, "..", "db", "entity")
 
     statSync(path)
 
-    return path
+    return path + "\\*.js"
   }
 }
 

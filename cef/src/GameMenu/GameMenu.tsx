@@ -118,9 +118,9 @@ export default function GameMenu() {
       <GameMenuContext.Provider value={{dispatch, state}}>
         <TabPanel value={value} index={GAMEMENU.PROFILE}><ProfileWrapper /></TabPanel>
         <TabPanel value={value} index={GAMEMENU.PLAYERS}><PlayersWrapper /></TabPanel>
-        <TabPanel value={value} index={GAMEMENU.HISTORY}><HistoryWrapper /></TabPanel>
+        <TabPanel value={value} index={GAMEMENU.HISTORY}><HistoryWrapper onRefresh={() => historyRequest(dispatch)}/></TabPanel>
         <TabPanel value={value} index={GAMEMENU.VOTE}><VoteWrapper /></TabPanel>
-        <TabPanel value={value} index={GAMEMENU.TOP}><TopPlayersWrapper /></TabPanel>
+        <TabPanel value={value} index={GAMEMENU.TOP}><TopPlayersWrapper onRefresh={() => topRequest(dispatch)}/></TabPanel>
         <TabPanel value={value} index={GAMEMENU.CREDITS}><CreditsWrapper /></TabPanel>
       </GameMenuContext.Provider>
     </div>

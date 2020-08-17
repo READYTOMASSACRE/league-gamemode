@@ -1,22 +1,20 @@
-import { DummyConfigManager, DummyLanguageManager } from "../managers"
+import { DummyConfigManager, DummyLanguageManager, DialogManager } from "../managers"
 import { ErrorHandler } from "../core/ErrorHandler"
+import { Tickable } from "../utils/Tickable"
 
 /**
  * Base class of a hud element
  */
-abstract class Hud implements INTERFACES.HudElement {
+abstract class Hud extends Tickable implements INTERFACES.HudElement {
   protected _textParams?: INTERFACES.TextParams
 
-  protected readonly INTERVAL: number = 1000
-
-  protected stopped: boolean = false
-  protected interval?: NodeJS.Timeout
-  
   constructor(
     readonly dummyConfig: DummyConfigManager,
     readonly lang: DummyLanguageManager,
     readonly errHandler: ErrorHandler,
   ) {
+    super(errHandler)
+
     this.render = this.render.bind(this)
 
     mp.events.add(SHARED.EVENTS.CLIENT_DUMMIES_READY, () => this.prepare())
@@ -43,39 +41,6 @@ abstract class Hud implements INTERFACES.HudElement {
    * Render a hud element
    */
   render(...args: any[]): void {}
-
-  /**
-   * Simulate the event Render by time this.SECOND
-   */
-  tick(callable: Function): void {
-    try {
-      this.stopped = false
-      if (this.interval) {
-        throw new ReferenceError("Interval has already set up")
-      }
-  
-      callable()
-
-      this.interval = setInterval(() => {
-        if (this.stopped) return this.stopTick()
-        if (typeof callable === 'function') callable()
-      }, this.INTERVAL)
-    } catch (err) {
-      if (!this.errHandler.handle(err)) throw err
-    }
-  }
-
-  /**
-   * Stop invoking the tick method
-   */
-  stopTick(): void {
-    this.stopped = true
-
-    if (typeof this.interval !== 'undefined') {
-      clearInterval(this.interval)
-      this.interval = undefined
-    }
-  }
 
   /**
    * Get default text params for the function mp.game.graphics.drawText

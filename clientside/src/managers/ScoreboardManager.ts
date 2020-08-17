@@ -61,7 +61,7 @@ class ScoreboardManager {
   open(): void {
     this.opened = true
     this.tickCycle()
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, true)
+    this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, true)
   }
 
   /**
@@ -69,7 +69,7 @@ class ScoreboardManager {
    */
   close(): void {
     this.opened = false
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, false)
+    this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_SCOREBOARD_TOGGLE, false)
   }
 
   /**

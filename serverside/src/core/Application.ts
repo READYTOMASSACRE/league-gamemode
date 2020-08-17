@@ -15,7 +15,7 @@ import { green, blue, bold, red } from 'colors'
 class Application {
   static readonly RECOMMENDED_PLAYERS = 32
   static readonly GAMEMODE = 'League'
-  static readonly VERSION  = '0.3.0'
+  static readonly VERSION  = '0.4.0'
 
   managers: Map<any, INTERFACES.Manager> = new Map<any, INTERFACES.Manager>()
   repositories: Map<any, any> = new Map()
@@ -29,12 +29,11 @@ class Application {
    * Start the app
    */
   @logMethod(DEBUG)
-  start(): boolean {
+  async start(): Promise<boolean> {
     try {
       this.prepare()
 
-      this.loadDatabase()
-      this.loadRepositories()
+      await this.loadDatabase()
       this.loadManagers()
 
       this.printSuccess()
@@ -92,31 +91,6 @@ class Application {
   }
 
   /**
-   * Load all repositories
-   */
-  private loadRepositories(): boolean {
-    const repositories: string[] = this.config.globPatterns.repositories
-
-    if (repositories) {
-      repositories.forEach(repo => {
-        const requiredRepos = require(repo)
-
-        for (let ctor in requiredRepos) {
-          if (typeof requiredRepos[ctor] == 'function') {
-            this.managers.set(
-              requiredRepos[ctor],
-              container.resolve(requiredRepos[ctor])
-            )
-            break
-          }
-        }
-      })
-    }
-
-    return true
-  }
-
-  /**
    * Load database
    */
   private async loadDatabase(): Promise<boolean> {
@@ -132,7 +106,7 @@ class Application {
         const dbManager: DbManager = container.resolve(requiredManager[ctor])
         this.managers.set(requiredManager[ctor], dbManager)
 
-        dbManager.load()
+        await dbManager.load()
         break
       }
     }

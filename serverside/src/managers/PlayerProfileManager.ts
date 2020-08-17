@@ -1,11 +1,12 @@
 import { singleton, injectable } from "tsyringe"
-import { PlayerProfileRepo } from "../db/repos/PlayerProfileRepo"
-import { DomainConverter } from "../db/domains/DomainConverter"
-import { PlayerProfile, CEFProfileDTO } from "../db/domains/PlayerProfile"
+import { Profile } from "../db/entity/Profile"
 import { logMethod } from "../utils"
 import { DEBUG } from "../bootstrap"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { NotFoundNotifyError } from "../errors/PlayerErrors"
+import { DomainConverter } from "../db/entity/DomainConverter"
+import { getCustomRepository } from "typeorm"
+import { ProfileRepository } from "../db/repos/ProfileRepository"
 
 /**
  * Class to manage player stats
@@ -13,11 +14,14 @@ import { NotFoundNotifyError } from "../errors/PlayerErrors"
 @singleton()
 @injectable()
 class PlayerProfileManager {
-  constructor(
-    readonly repo: PlayerProfileRepo,
-    readonly errHandler: ErrorHandler,
-  ) {
+  public repository?: ProfileRepository
+
+  constructor(readonly errHandler: ErrorHandler) {
     this.playerLogin = this.playerLogin.bind(this)
+  }
+
+  load(): void {
+    this.repository = getCustomRepository(ProfileRepository)
   }
 
   /**
@@ -26,12 +30,21 @@ class PlayerProfileManager {
    */
   async playerLogin(player: PlayerMp): Promise<void> {
     try {
-      const profile = await this.repo.getPlayerById(player)
-      player.sharedData.profile = DomainConverter.toDto(profile)
+      if (this.repository) {
+        let profile = await this.repository.getPlayerById(player)
 
-      player.call(SHARED.EVENTS.SERVER_PLAYER_LOGIN_SUCCESS, [])
+        if (!profile) {
+          profile = Profile.create(player)
+          this.repository.saveProfile(profile)
+        }
+
+        player.sharedData.profile = DomainConverter.toDto(profile)
+  
+        player.call(SHARED.EVENTS.SERVER_PLAYER_LOGIN_SUCCESS, [])
+        mp.events.call(SHARED.EVENTS.SERVER_PLAYER_LOGIN_SUCCESS, player)
+      }
     } catch (err) {
-      console.error(err)
+      if (!this.errHandler.handle(err)) throw err
       player.call(SHARED.EVENTS.SERVER_PLAYER_LOGIN_FAILURE, [])
     }
   }
@@ -76,7 +89,7 @@ class PlayerProfileManager {
       profile.setLose()
     }
 
-    return this.update(player, profile)
+    return this.updateSharedProfile(player, profile)
   }
 
   /**
@@ -85,7 +98,7 @@ class PlayerProfileManager {
    * @param {PlayerMp} player 
    * @param {PlayerProfile} profile 
    */
-  update(player: PlayerMp, profile: PlayerProfile): boolean {
+  updateSharedProfile(player: PlayerMp, profile: Profile): boolean {
     player.sharedData.profile = DomainConverter.toDto(profile)
 
     return true
@@ -97,10 +110,14 @@ class PlayerProfileManager {
    */
   @logMethod(DEBUG)
   async save(player: PlayerMp): Promise<boolean> {
-    const profile = DomainConverter.fromDto(PlayerProfile, player.sharedData.profile)
+    if (!this.repository) return false
+
+    const profile = DomainConverter.fromDto(Profile, player.sharedData.profile)
 
     try {
-      return await profile.save(this.repo)
+      const response = await this.repository.saveProfile(profile)
+
+      return !!response.ok
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
 
@@ -112,12 +129,12 @@ class PlayerProfileManager {
    * Get player profile domain
    * @param {PlayerMp} player 
    */
-  getDomain(player: PlayerMp, notifiedPlayer?: PlayerMp): PlayerProfile {
+  getDomain(player: PlayerMp, notifiedPlayer?: PlayerMp): Profile {
     if (!player.sharedData.profile) {
       throw new NotFoundNotifyError(SHARED.MSG.ERR_PROFILE_NOT_FOUND, notifiedPlayer || player)
     }
 
-    return DomainConverter.fromDto(PlayerProfile, player.sharedData.profile)
+    return DomainConverter.fromDto(Profile, player.sharedData.profile)
   }
 }
 

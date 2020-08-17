@@ -1,6 +1,6 @@
 import { singleton, autoInjectable } from "tsyringe"
 import { Config } from "../core/Config"
-import { command, commandable } from "rage-decorators"
+import { command, commandable, event, eventable } from "rage-decorators"
 import { PlayerManager } from "./PlayerManager"
 import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 import { ErrorHandler } from "../core/ErrorHandler"
@@ -15,23 +15,51 @@ const GROUP_CMD = 'g'
  */
 @singleton()
 @commandable()
+@eventable()
 @autoInjectable()
 class GroupManager {
   private rcon: string
 
   constructor(
-    config: Config,
+    readonly config: Config,
     readonly playerManager: PlayerManager,
     readonly playerProfileManager: PlayerProfileManager,
     readonly lang: DummyLanguageManager,
     readonly errHandler: ErrorHandler,
   ) {
-    this.rcon               = hash256(config.get('RCON'))
+    this.rcon               = hash256(this.config.get('RCON'))
     this.rconCmd            = this.rconCmd.bind(this)
     this.loginCmd           = this.loginCmd.bind(this)
     this.addAdminCmd        = this.addAdminCmd.bind(this)
     this.addModeratorCmd    = this.addModeratorCmd.bind(this)
     this.addUserCmd         = this.addUserCmd.bind(this)
+    this.playerLogin        = this.playerLogin.bind(this)
+  }
+
+  /**
+   * Event
+   * 
+   * Fires when a player has logged
+   * Try to log in as admin/mod if config has flag
+   * @param {PlayerMp} player 
+   */
+  @event(SHARED.EVENTS.SERVER_PLAYER_LOGIN_SUCCESS)
+  playerLogin(player: PlayerMp) {
+    try {
+      const autologin = this.config.get('AUTOLOGIN')
+      if (autologin === true) {
+        const profile   = this.playerProfileManager.getDomain(player)
+        const group     = profile.getGroup()
+
+        if ([SHARED.GROUP.ADMIN, SHARED.GROUP.MODERATOR].indexOf(group) !== -1) {
+          const successLogin = true
+          this.playerManager.setGroup(player, group)
+          this.sendLoginNotify(player, successLogin, group)
+        }
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
   }
 
   /**
@@ -216,7 +244,7 @@ class GroupManager {
 
       profile.setPassword(newPassword)
 
-      this.playerProfileManager.update(player, profile)
+      this.playerProfileManager.updateSharedProfile(player, profile)
       this.playerProfileManager.save(player)
 
       this.sendChangePasswordNotify(player)
@@ -281,7 +309,7 @@ class GroupManager {
       profile.setGroup(group)
       if (password) profile.setPassword(password)
 
-      this.playerProfileManager.update(addingPlayer, profile)
+      this.playerProfileManager.updateSharedProfile(addingPlayer, profile)
       this.playerProfileManager.save(addingPlayer)
     }
 

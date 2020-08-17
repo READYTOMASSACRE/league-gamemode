@@ -19,6 +19,7 @@ const SETTER_NOT_ALLOWED = false
 class PlayerManager {
   private cursor: boolean = false
   public readonly player: PlayerMp = mp.players.local
+  private isFreezed: boolean = false
 
   constructor(
     readonly dialogManager: DialogManager,
@@ -266,7 +267,7 @@ class PlayerManager {
    * Open the weapon dialog
    */
   weaponDialog(): void {
-    this.dialogManager.open(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_OPEN)
+    this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_OPEN)
   }
 
   /**
@@ -288,6 +289,27 @@ class PlayerManager {
     })
 
     return players
+  }
+
+  /**
+   * Freeze a player
+   */
+  freeze(toggle: boolean): void {
+    if (toggle !== this.isFreezed) {
+      if (toggle) {
+        mp.events.add(RageEnums.EventKey.RENDER, this.disableAllControlActions)
+      } else {
+        mp.events.remove(RageEnums.EventKey.RENDER, this.disableAllControlActions)
+      }
+      this.isFreezed = toggle
+    }
+  }
+
+  /**
+   * Disable game control actions in second input group
+   */
+  private disableAllControlActions(): void {
+    mp.game.controls.disableAllControlActions(2)
   }
 }
 

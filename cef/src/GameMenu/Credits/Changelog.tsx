@@ -6,6 +6,7 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore'
 import { StyledAccordionSummary, StyledAccordionDetails } from '../../Theme/Dark/AccordionComponents'
 import Changes020 from './Changes020'
 import Changes030 from './Changes030'
+import Changes040 from './Changes040'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -31,6 +32,16 @@ export default function Changelog() {
 
   return (
     <div className={classes.root}>
+      <Accordion>
+        <StyledAccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+        >
+          <Typography className={classes.heading}>0.4.0 changes</Typography>
+        </StyledAccordionSummary>
+        <StyledAccordionDetails>
+          <Changes040 />
+        </StyledAccordionDetails>
+      </Accordion>
       <Accordion>
         <StyledAccordionSummary
           expandIcon={<ExpandMoreIcon />}

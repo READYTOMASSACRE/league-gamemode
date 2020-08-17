@@ -1,5 +1,4 @@
 import React from 'react'
-import Box from '@material-ui/core/Box'
 import { makeStyles } from '@material-ui/styles'
 import DirectionsRunIconCustom from './DirectionsRunIconCustom'
 
@@ -59,25 +58,45 @@ const useStyles = makeStyles({
     }
   },
   spanAtt: {
-    color: ({ team }: Props) => team.ATTACKERS.color
+    color: ({ team }: Props) => team.ATTACKERS.color,
+    margin: 5,
   },
   spanDef: {
-    color: ({ team }: Props) => team.DEFENDERS.color
+    color: ({ team }: Props) => team.DEFENDERS.color,
+    margin: 5,
   },
 })
 
+interface RoundTimerProps {
+  className   : string
+  time        : string
+  arena       : string
+}
 // component props
 interface Props {
   open?: boolean
-  time: string
-  arena: string
+  round?: {
+    time    : string
+    arena   : string
+  }
   team: {
     [key in Exclude<SHARED.TEAMS, SHARED.TEAMS.SPECTATORS>]: {
-      name: string
-      color: string
-      players: number[]
+      name    : string
+      color   : string
+      players : number[]
+      score   : number
     }
   }
+}
+
+function RoundTimer(props: RoundTimerProps) {
+  const { time, arena, className } = props
+  return (
+    <div className={className}>
+      <span>{arena}</span>
+      <span>{time}</span>
+    </div>
+  )
 }
 
 /**
@@ -87,28 +106,30 @@ interface Props {
 export default function InfoPanel(props: Props) {
   const classes = useStyles(props)
 
+  let centerPanel: any = <span>-</span>
+  if (props.round) centerPanel = <RoundTimer className={classes.round} {...props.round} />
+
   return (
-    <Box className={classes.root}>
+    <div className={classes.root}>
       <div className={classes.team}>
         <span className={classes.spanAtt}>{props.team.ATTACKERS.name}</span>
+        <span className={classes.spanAtt}>{props.team.ATTACKERS.score}</span>
         <span className={classes.alive}>
           {props.team.ATTACKERS.players.map((health, index) => (
             <DirectionsRunIconCustom key={index} fontSize="inherit" gradientid={'att'+index} className="Infopanel__player" healthgradient={healthGradient(health)} />
           ))}
         </span>
       </div>
-      <div className={classes.round}>
-      <span>{props.arena}</span>
-      <span>{props.time}</span>
-      </div>
+      {centerPanel}
       <div className={classes.team}>
         <span className={classes.alive}>
           {props.team.DEFENDERS.players.map((health, index) => (
             <DirectionsRunIconCustom key={index} fontSize="inherit" gradientid={'deff'+index} className="Infopanel__player" healthgradient={healthGradient(health)} />
           ))}
         </span>
+        <span className={classes.spanDef}>{props.team.DEFENDERS.score}</span>
         <span className={classes.spanDef}>{props.team.DEFENDERS.name}</span>
       </div>
-    </Box>
+    </div>
   )
 }

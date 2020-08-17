@@ -1,20 +1,18 @@
+import { Entity, PrimaryColumn, Column, ObjectIdColumn, ObjectID } from "typeorm"
 import { DomainConverter } from "./DomainConverter"
 import { validatorFactory } from "../../validators/validatorFactory"
 import { operationFactory } from "../../validators/operationFactory"
 import { logMethod } from "../../utils"
 import { DEBUG } from "../../bootstrap"
-import { RoundStatRepo } from "../repos/RoundStatRepo"
 import { RoundStatGetError, RoundStatUpdateError, NotFoundNotifyError } from "../../errors/PlayerErrors"
 import { IsNotExistsError, InvalidTypeError } from "../../errors/LogErrors"
 
-type RoundIgnoredKeys = 'id' | 'rgscId' | 'win' | 'draw' | 'accuracy'
+type RoundIgnoredKeys = 'id' | 'rgscId' | 'win' | 'draw' | 'accuracy' | 'name'
 type RoundStatEditableKeys = Exclude<keyof SHARED.TYPES.PlayerRoundStatDTO, RoundIgnoredKeys>
 export type RoundKeyValueCollection = { [key in RoundStatEditableKeys]: string }
 
-/**
- * Round stats domain
- */
-class RoundStat {
+@Entity()
+export class Round {
   static validators: RoundKeyValueCollection = {
     kill              : "number",
     death             : "number",
@@ -35,13 +33,20 @@ class RoundStat {
     shotsHit          : "add",
   }
 
-  constructor(
-    public readonly state: SHARED.TYPES.RoundStatDTO,
-  ) {
-  }
+  @ObjectIdColumn()
+  public id!: ObjectID
 
-  get id(): string {
-    return this.state.created_at.toString()
+  @Column()
+  public created_at!: number
+
+  @Column()
+  public state!: SHARED.TYPES.RoundStatDTO
+
+  constructor(state: SHARED.TYPES.RoundStatDTO) {
+    if (state) {
+      this.created_at   = state.created_at
+      this.state        = state
+    }
   }
 
   /**
@@ -74,7 +79,7 @@ class RoundStat {
    */
   setPlayerRoundData<K extends keyof RoundKeyValueCollection>(player: PlayerMp, key: K, data: SHARED.TYPES.PlayerRoundStatDTO[K]): boolean {
     const stateIndex = this.getStateIndex(player)
-    const validator = RoundStat.getValidator(key)
+    const validator = Round.getValidator(key)
 
     const teamId = player.sharedData.teamId
 
@@ -87,7 +92,7 @@ class RoundStat {
     this.state[teamId][stateIndex][key] = data
 
     if (['shotsFired', 'shotsHit'].indexOf(key) !== -1) {
-      this.state[teamId][stateIndex]["accuracy"] = RoundStat.calculateAccuracy(this.state[teamId][stateIndex])
+      this.state[teamId][stateIndex]["accuracy"] = Round.calculateAccuracy(this.state[teamId][stateIndex])
     }
 
     return true
@@ -102,7 +107,7 @@ class RoundStat {
   @logMethod(DEBUG)
   updatePlayerRoundData<K extends keyof RoundKeyValueCollection>(player: PlayerMp, key: K, data: SHARED.TYPES.PlayerRoundStatDTO[K]): boolean {
     const stateIndex = this.getStateIndex(player)
-    const validator = RoundStat.getValidator(key)
+    const validator = Round.getValidator(key)
 
     const teamId = player.sharedData.teamId
 
@@ -112,11 +117,11 @@ class RoundStat {
 
     if (!validator(data)) return false
 
-    const updateOperation = RoundStat.getOperation(key)
+    const updateOperation = Round.getOperation(key)
     this.state[teamId][stateIndex][key] = updateOperation(this.state[teamId][stateIndex][key], data)
     
     if (['shotsFired', 'shotsHit'].indexOf(key) !== -1) {
-      this.state[teamId][stateIndex]["accuracy"] = RoundStat.calculateAccuracy(this.state[teamId][stateIndex])
+      this.state[teamId][stateIndex]["accuracy"] = Round.calculateAccuracy(this.state[teamId][stateIndex])
     }
 
     return true
@@ -169,6 +174,53 @@ class RoundStat {
   }
 
   /**
+   * Update player's team
+   * @param {PlayerMp} player
+   */
+  updatePlayerTeam(player: PlayerMp): void {
+    try {
+      const playerTeamId    = player.sharedData.teamId
+      const [teamId, index] = this.getPlayerTeam(player)
+
+      if (
+        playerTeamId !== teamId
+        && playerTeamId !== SHARED.TEAMS.SPECTATORS
+      ) {
+        this.swapTeamByIndex(teamId, playerTeamId, index)
+      }
+    } catch (err) {
+      if (err instanceof NotFoundNotifyError) {
+        const teamId    = player.sharedData.teamId
+
+        if (teamId !== SHARED.TEAMS.SPECTATORS) {
+          const dto       = Round.getDefault()
+  
+          dto.name        = player.name
+          dto.id          = player.id
+          dto.rgscId      = player.rgscId
+  
+          this.state[teamId].push(dto)
+        }
+      } else {
+        throw err
+      }
+    }
+  }
+
+  /**
+   * Swap player's team
+   * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS} from 
+   * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS} to 
+   * @param {number} index 
+   */
+  swapTeamByIndex(from: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS, to: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS, index: number): void {
+    if (index > -1) {
+      const playerStats = this.state[from].splice(index, 1)
+      this.state[to].push(...playerStats)
+    }
+  }
+
+  /**
    * Get player's round statistic
    * @param {PlayerMp} player 
    */
@@ -205,17 +257,6 @@ class RoundStat {
   }
 
   /**
-   * Save the current round stat
-   * @param {RoundStatRepo} repo - the repository of a round stat domain
-   */
-  async save(repo: RoundStatRepo): Promise<boolean> {
-    const deltaFunc   = repo.diffDelta(this.state)
-    const response    = await repo.schema.upsert(this.id, deltaFunc)
-
-    return response.updated
-  }
-
-  /**
    * Get state index of the player
    * @param {PlayerMp} player 
    * 
@@ -246,11 +287,11 @@ class RoundStat {
    * @throws {InvalidTypeError}
    */
   static getValidator(key: keyof RoundKeyValueCollection) {
-    if (!RoundStat.validators[key]) {
+    if (!Round.validators[key]) {
       throw new IsNotExistsError("Invalid key " + key)
     }
 
-    const validator = validatorFactory(RoundStat.validators[key] as any)
+    const validator = validatorFactory(Round.validators[key] as any)
 
     if (!validator || typeof validator !== 'function') {
       throw new InvalidTypeError("Invalid validator")
@@ -268,11 +309,11 @@ class RoundStat {
    * @throws {InvalidTypeError}
    */
   static getOperation(key: keyof RoundKeyValueCollection) {
-    if (!RoundStat.operations[key]) {
+    if (!Round.operations[key]) {
       throw new IsNotExistsError("Invalid key " + key)
     }
 
-    const operation = operationFactory(RoundStat.operations[key] as any)
+    const operation = operationFactory(Round.operations[key] as any)
 
     if (!operation || typeof operation !== 'function') {
       throw new InvalidTypeError("Invalid operation")
@@ -285,8 +326,8 @@ class RoundStat {
    * @param {number} startDate - start date of the round
    * @param {PlayerMp[]} players (optional)
    */
-  static create(startDate?: number, players: PlayerMp[] = []): RoundStat {
-    const [attackers, defenders] = RoundStat.preparePlayers(players)
+  static create(startDate?: number, players: PlayerMp[] = []): Round {
+    const [attackers, defenders] = Round.preparePlayers(players)
 
     const dto: SHARED.TYPES.RoundStatDTO = {
       created_at: startDate || Date.now(),
@@ -295,7 +336,7 @@ class RoundStat {
       DEFENDERS: defenders,
     }
 
-    return DomainConverter.fromDto(RoundStat, dto)
+    return DomainConverter.fromDto(Round, dto)
   }
 
   /**
@@ -306,7 +347,9 @@ class RoundStat {
     const attackers = players
       .filter(player => player.sharedData.teamId === SHARED.TEAMS.ATTACKERS)
       .map(player => {
-        const dto   = RoundStat.getDefault()
+        const dto   = Round.getDefault()
+
+        dto.name    = player.name
         dto.id      = player.id
         dto.rgscId  = player.rgscId
 
@@ -316,7 +359,9 @@ class RoundStat {
     const defenders = players
       .filter(player => player.sharedData.teamId === SHARED.TEAMS.DEFENDERS)
       .map(player => {
-        const dto   = RoundStat.getDefault()
+        const dto   = Round.getDefault()
+
+        dto.name    = player.name
         dto.id      = player.id
         dto.rgscId  = player.rgscId
 
@@ -332,6 +377,7 @@ class RoundStat {
   static getDefault(): SHARED.TYPES.PlayerRoundStatDTO {
     return {
       id                : 0,
+      name              : "",
       rgscId            : "",
       kill              : 0,
       death             : 0,
@@ -361,19 +407,17 @@ class RoundStat {
       .forEach(([key, accumulatorValue]) => {
         const dtoKey = key as keyof RoundKeyValueCollection
         const dtoValue = value[dtoKey]
-        if (typeof dtoValue !== 'undefined' && RoundStat.validators[dtoKey] && RoundStat.operations[dtoKey]) {
-          const validator = RoundStat.getValidator(dtoKey)
+        if (typeof dtoValue !== 'undefined' && Round.validators[dtoKey] && Round.operations[dtoKey]) {
+          const validator = Round.getValidator(dtoKey)
           if (validator(dtoValue)) {
-            const operation = RoundStat.getOperation(dtoKey)
+            const operation = Round.getOperation(dtoKey)
             accumulator = {...accumulator, ...{ [dtoKey]: operation(accumulatorValue, dtoValue) } }
           }
         }
       })
 
-    accumulator["accuracy"] = RoundStat.calculateAccuracy(accumulator)
+    accumulator["accuracy"] = Round.calculateAccuracy(accumulator)
 
     return accumulator
   }
 }
-
-export { RoundStat }

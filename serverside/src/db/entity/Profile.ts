@@ -1,27 +1,36 @@
+import { Entity, PrimaryColumn, Column, Index, ObjectIdColumn, ObjectID } from 'typeorm'
 import { DomainConverter } from "./DomainConverter"
-import { PlayerProfileRepo } from "../repos/PlayerProfileRepo"
 import { PlayerStatUpdateError, InvalidLoginGroup } from "../../errors/PlayerErrors"
 import { hash256, formatDate } from "../../utils"
 
 const MINUTE = 1000 * 60
 
-export type CEFProfileDTO = Exclude<SHARED.TYPES.PlayerProfileDTO, 'rgscId' | 'group' | 'password' | 'previousNames' | 'registered'> | {
+export type CEFProfileDTO = Exclude<SHARED.TYPES.ProfileDTO, 'rgscId' | 'group' | 'password' | 'previousNames' | 'registered'> | {
   previousNames: string
   registered: string
 }
 
 export type USER_GROUPS = Exclude<SHARED.GROUP, SHARED.GROUP.ROOT>
-/**
- * Player stats domain
- */
-class PlayerProfile {
+
+@Entity()
+export class Profile {
   static readonly MMR_GAIN = 25
   static readonly EXP_GAIN = 50
 
-  constructor(public readonly state: SHARED.TYPES.PlayerProfileDTO) {}
+  @ObjectIdColumn()
+  id!: ObjectID
 
-  get id(): string {
-    return this.state.rgscId
+  @PrimaryColumn()
+  rgscId!: string
+
+  @Column()
+  state!: SHARED.TYPES.ProfileDTO
+
+  constructor(dto: SHARED.TYPES.ProfileDTO) {
+    if (dto) {
+      this.rgscId   = dto.rgscId
+      this.state    = dto
+    }
   }
 
   /**
@@ -30,11 +39,12 @@ class PlayerProfile {
    */
   setName(name: string): void {
     if (name !== this.state.name) {
-       this.state.name = name
+      const prevName    = this.state.name
+      this.state.name   = name
 
-       if (this.state.previousNames.indexOf(name) === -1) {
-         this.state.previousNames = [...this.state.previousNames, name]
-       }
+      if (this.state.previousNames.indexOf(prevName) === -1) {
+        this.state.previousNames = [...this.state.previousNames, prevName]
+      }
     }
   }
 
@@ -45,7 +55,7 @@ class PlayerProfile {
    * @throws {PlayerStatUpdateError}
    */
   updateRoundData(data: SHARED.TYPES.PlayerRoundStatDTO): void {
-    if (data.rgscId !== this.id) {
+    if (data.rgscId !== this.rgscId) {
       throw new PlayerStatUpdateError(SHARED.MSG.ERR_WRONG_PLAYER_DATA, mp.players.at(data.id))
     }
 
@@ -65,8 +75,8 @@ class PlayerProfile {
    */
   setWin(): void {
     this.state.wins     += 1
-    this.state.exp      += PlayerProfile.EXP_GAIN * 2
-    this.state.mmr      += PlayerProfile.MMR_GAIN
+    this.state.exp      += Profile.EXP_GAIN * 2
+    this.state.mmr      += Profile.MMR_GAIN
   }
 
   /**
@@ -74,8 +84,8 @@ class PlayerProfile {
    */
   setLose(): void {
     this.state.losses   += 1
-    this.state.exp      += PlayerProfile.EXP_GAIN
-    this.state.mmr      -= PlayerProfile.MMR_GAIN
+    this.state.exp      += Profile.EXP_GAIN
+    this.state.mmr      -= Profile.MMR_GAIN
     if (this.state.mmr < 0) this.state.mmr = 0
   }
 
@@ -84,7 +94,7 @@ class PlayerProfile {
    */
   setDraw(): void {
     this.state.draws    += 1
-    this.state.exp      += PlayerProfile.EXP_GAIN
+    this.state.exp      += Profile.EXP_GAIN
   }
 
   /**
@@ -150,7 +160,7 @@ class PlayerProfile {
 
     if (
       mp.players.exists(player)
-      && this.id === player.rgscId
+      && this.rgscId === player.rgscId
       && player.playingTime
     ) {
       this.state.timePlayed += this.calculatePlayingTime(player)
@@ -205,17 +215,6 @@ class PlayerProfile {
   }
 
   /**
-   * Save the current player stat
-   * @param {PlayerProfileRepo} repo - the repository of a player stat domain
-   */
-  async save(repo: PlayerProfileRepo): Promise<boolean> {
-    const deltaFunc   = repo.diffDelta(this.state)
-    const response    = await repo.schema.upsert(this.id, deltaFunc)
-
-    return response.updated
-  }
-
-  /**
    * Return an available groups to login
    */
   get loginAvailableGroups(): SHARED.GROUP[] {
@@ -226,19 +225,19 @@ class PlayerProfile {
    * Create new player stats
    * @param {PlayerMp} player 
    */
-  static create(player: PlayerMp): PlayerProfile {
-    const dto: SHARED.TYPES.PlayerProfileDTO = PlayerProfile.getDefault()
+  static create(player: PlayerMp): Profile {
+    const dto: SHARED.TYPES.ProfileDTO = Profile.getDefault()
 
     dto.rgscId = player.rgscId
     dto.name   = player.name
 
-    return DomainConverter.fromDto(PlayerProfile, dto)
+    return new Profile(dto)
   }
 
   /**
    * Get default player stats DTO 
    */
-  static getDefault(): SHARED.TYPES.PlayerProfileDTO {
+  static getDefault(): SHARED.TYPES.ProfileDTO {
     return {
       rgscId        : "",
       name          : "",
@@ -263,5 +262,3 @@ class PlayerProfile {
     }
   }
 }
-
-export { PlayerProfile }

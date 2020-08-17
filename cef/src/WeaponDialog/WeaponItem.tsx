@@ -20,7 +20,7 @@ const useStyles = makeStyles((theme: Theme) =>
       '&:hover, &$focusVisible': {
         zIndex: 1,
         '& $imageBackdrop': {
-          opacity: 0.9,
+          opacity: 0.7,
         },
         '& $imageTitle': {
           opacity: 1
@@ -59,7 +59,7 @@ const useStyles = makeStyles((theme: Theme) =>
       right: 0,
       top: 0,
       bottom: 0,
-      background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+      background: 'linear-gradient(45deg, #222 30%, #333 70%)',
       opacity: 0,
       transition: theme.transitions.create('opacity'),
       borderRadius: 3,

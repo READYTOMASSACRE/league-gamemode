@@ -7,12 +7,20 @@ declare namespace SHARED {
     SERVER_MAP_DRAW               = 'map.draw',
     /** This event is invoked by serverside to stop drawing a zone on minimap on clientside */
     SERVER_MAP_CLEAR              = 'map.clear',
+    /** This event is invoked by serverside when players should prepare for the round start */
+    SERVER_ROUND_PREPARE          = 'round.prepare',
     /** This event is invoked by serverside when round starts */
     SERVER_ROUND_START            = 'round.start',
     /** This event is invoked by serverside when round ends */
     SERVER_ROUND_END              = 'round.end',
+    /** This event is invoked by serverside when a player is added to the round */
+    SERVER_ROUND_PLAYER_ADD       = 'round.player.add',
+    /** This event is invoked by serverside when a player is removed from the round */
+    SERVER_ROUND_PLAYER_REMOVE    = 'round.player.remove',
     /** This event is invoked by serverside when round is paused or unpaused */
     SERVER_ROUND_PAUSE            = 'round.pause',
+    /** This event is invoked by serverside to update a team score */
+    SERVER_ROUND_TEAMSCORE        = 'round.teamscore',
     /** This event is invoked by serverside when the player is ready to play */
     SERVER_PLAYER_READY           = 'player.ready',
     /** This event is invoked by serverside when the player should logIn */
@@ -33,6 +41,9 @@ declare namespace SHARED {
     SERVER_VOTEMAP_UPDATE         = 'votemap.update',
     /** This event is invoked by serverside to add a new deathlog */
     SERVER_DEATHLOG               = 'server.deathlog',
+    /** This event is invoked by serverside to notify a player about a damage */
+    SERVER_DAMAGE_NOTIFY          = 'damage.notify',
+
     /**
      * ================ CLIENT-SIDE EVENTS ================
      */
@@ -50,11 +61,14 @@ declare namespace SHARED {
     CLIENT_ASSIST_UPDATE          = 'roundstat.update.assist',
     /** This event is invoked by clientside when client browser is ready */
     CLIENT_BROWSER_READY          = 'browser.ready',
+    /** This event is invoked by clientside to notify a player about outcoming damage by player id */
+    CLIENT_DAMAGE_REQUEST_NOTIFY  = 'damage.request',
+    /** This event is invoked by clientside to notify that player is dead */
+    CLIENT_PLAYER_DEATH           = 'player.death',
+
     /**
     * ================= SHARED EVENTS =================
     */
-    
-     
     /**
     * ================= CEF EVENTS =================
     */
@@ -110,9 +124,12 @@ declare namespace SHARED {
     CLIENT_NOTIFY_NOTISTACK       = 'CEF.notify.notistack',
     /** This event is invoked by clientside when the client is toggling gamemenu */
     CLIENT_GAMEMENU_TOGGLE        = 'CEF.gamemenu.toggle',
+    /** This event is invoked by clientside to send a message about round ending into cef */
+    CLIENT_NOTIFY_ROUND_END       = 'CEF.notify.round.end',
+    /** This event is invoked by clientside to send a message about a player's death into cef */
+    CLIENT_NOTIFY_DEATH           = 'CEF.notify.death',
   }
 
-  
   /**
    * The player's states of the game
    */
@@ -225,16 +242,42 @@ declare namespace SHARED {
       TEXT: TextDrawParams
     }
 
+    type DamageConfig = {
+      TIME                      : number
+    }
+
     type HudConfig = {
       GLOBAL                    : GlobalHudConfig
       NAMETAG                   : NametagConfig
+      DAMAGE                    : DamageConfig
+    }
+
+    type WeaponDamageConfig = {
+      GROUP: {
+        [key in string]         : number
+      }
+      SPECIFIC: {
+        [key in string]         : number
+      }
+    }
+
+    type EffectsConfig = {
+      DEATH: {
+        PLAYING_SECONDS: number
+      }
+      ROUND: {
+        PLAYING_SECONDS: number
+        PLAYING_END_SECONDS: number
+      }
     }
 
     type Config = {
       SERVER_NAME               : string
       LOBBY                     : [number, number, number]
       TEAMS                     : Teams
+      WEAPONS                   : { [key in string]: string[] }
       WEAPON_SET                : string[][]
+      WEAPON_DAMAGE             : WeaponDamageConfig
       TEAM_SELECTOR             : TeamSelectorConfig
       LANGUAGE                  : string
       ROUND_TIME_INTERVAL       : number
@@ -245,6 +288,7 @@ declare namespace SHARED {
       HUD                       : HudConfig
       GAMEMODE                  : string
       VERSION                   : string
+      EFFECTS                   : EffectsConfig
     }
 
     type DummyTypes = {
@@ -258,13 +302,14 @@ declare namespace SHARED {
     type SharedData = {
       state                     : SHARED.STATE
       teamId                    : SHARED.TEAMS
-      profile?                  : PlayerProfileDTO
+      profile?                  : ProfileDTO
       lang                      : string
       group                     : SHARED.GROUP
     }
 
     type PlayerRoundStatDTO = {
       id                        : number
+      name                      : string
       rgscId                    : string
       kill                      : number
       death                     : number
@@ -291,7 +336,7 @@ declare namespace SHARED {
       }
     }
   
-    type PlayerProfileDTO = {
+    type ProfileDTO = {
       rgscId                    : string
       name                      : string
       registered                : number
@@ -402,6 +447,8 @@ declare namespace SHARED {
     DAMAGE_RECEIVED                   = "DAMAGE_RECEIVED",
     PING                              = "PING",
 
+    DEATH_TEXT                        = "DEATH_TEXT",
+
     IDLE                              = "IDLE",
     SELECT                            = "SELECT",
     ALIVE                             = "ALIVE",
@@ -419,9 +466,11 @@ declare namespace SHARED {
 
     ROUND_START_MESSAGE               = "ROUND_START_MESSAGE",
     ROUND_STOP_MESSAGE                = "ROUND_STOP_MESSAGE",
+    ROUND_START_EFFECT_TEXT           = "ROUND_START_EFFECT_TEXT",
     ROUND_PAUSED_MESSAGE              = "ROUND_PAUSED_MESSAGE",
     ROUND_ADD_TO_ROUND_SUCCESS        = "ROUND_ADD_TO_ROUND_SUCCESS",
     ROUND_REMOVE_FROM_ROUND_SUCCESS   = "ROUND_REMOVE_FROM_ROUND_SUCCESS",
+    ROUND_WINNING_TEXT                = "ROUND_WINNING_TEXT",
 
     GROUP_LOGIN_SUCCESS               = "GROUP_LOGIN_SUCCESS",
     GROUP_LOGIN_FAILURE               = "GROUP_LOGIN_FAILURE",
@@ -459,6 +508,10 @@ declare namespace SHARED {
     GAMEMENU_HISTORY_TD_RESULT        = "GAMEMENU_HISTORY_TD_RESULT",
     GAMEMENU_HISTORY_TD_DATE          = "GAMEMENU_HISTORY_TD_DATE",
     GAMEMENU_HISTORY_TD_KDA           = "GAMEMENU_HISTORY_TD_KDA",
+    GAMEMENU_HISTORY_TD_NAME          = "GAMEMENU_HISTORY_TD_NAME",
+
+    GAMEMENU_HISTORY_DETAIL_EMPTY     = "GAMEMENU_HISTORY_DETAIL_EMPTY",
+    GAMEMENU_HISTORY_DETAIL_VICTORY   = "GAMEMENU_HISTORY_DETAIL_VICTORY",
 
     GAMEMENU_VOTE                     = "GAMEMENU_VOTE",
     GAMEMENU_VOTE_LABEL               = "GAMEMENU_VOTE_LABEL",
@@ -467,5 +520,6 @@ declare namespace SHARED {
 
     GAMEMENU_TOP                      = "GAMEMENU_TOP",
     GAMEMENU_CREDITS                  = "GAMEMENU_CREDITS",
+    GAMEMENU_REFRESH_BTN              = "GAMEMENU_REFRESH_BTN",
   }
 }

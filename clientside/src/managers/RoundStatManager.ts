@@ -2,6 +2,8 @@ import { eventable, event } from "rage-decorators"
 import { singleton, autoInjectable } from "tsyringe"
 import { PlayerManager } from "./PlayerManager"
 import { ErrorHandler } from "../core/ErrorHandler"
+import { HudManager } from "./HudManager"
+import { WeaponManager } from "./WeaponManager"
 
 /**
  * Class to manage the round stats
@@ -14,7 +16,9 @@ class RoundStatManager {
 
   constructor(
     readonly playerManager    : PlayerManager,
-    readonly errHandler       : ErrorHandler
+    readonly errHandler       : ErrorHandler,
+    readonly hudManager       : HudManager,
+    readonly weaponManager    : WeaponManager,
   ) {
     this.outcomingDamage    = this.outcomingDamage.bind(this)
     this.incomingDamage     = this.incomingDamage.bind(this)
@@ -43,8 +47,10 @@ class RoundStatManager {
         && this.playerManager.hasState(SHARED.STATE.ALIVE, targetPlayer)
       ) {
         if (this.sameTeam(targetPlayer)) return true
+
+        const newDamage = this.weaponManager.calculateDamage(weapon) || damage
   
-        this.addDamage(weapon, damage)
+        this.addDamage(weapon, newDamage)
         this.addShotsHit()
       }
     } catch (err) {
@@ -73,9 +79,27 @@ class RoundStatManager {
         && this.playerManager.hasState(SHARED.STATE.ALIVE, sourceEntity)
       ) {
         if (this.sameTeam(sourceEntity)) return true
+
+        const newDamage = this.weaponManager.calculateDamage(weapon) || damage
         
         this.addAssist(sourceEntity)
-        this.addDamageReceived(weapon, damage)
+        this.addDamageReceived(weapon, newDamage)
+        this.damageNotify(sourceEntity, newDamage, weapon)
+
+        if (newDamage !== damage) {
+          const health          = this.player.getHealth() - newDamage
+          this.player.health    = health
+
+          mp.events.callRemote(SHARED.EVENTS.CLIENT_SET_PLAYER_DATA, JSON.stringify({ health }))
+          
+          if (health <= 0) {
+            const deathParams = { killerId: sourceEntity.remoteId, reason: weapon }
+            mp.events.callRemote(SHARED.EVENTS.CLIENT_PLAYER_DEATH, JSON.stringify(deathParams))
+            this.hudManager.deathEffect.start()
+          }
+
+          return true
+        }
       }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
@@ -103,6 +127,7 @@ class RoundStatManager {
         if (this.player.customData.assist[killer.remoteId]) delete this.player.customData.assist[killer.remoteId]
     
         mp.events.callRemote(SHARED.EVENTS.CLIENT_ASSIST_UPDATE, JSON.stringify(this.player.customData.assist))
+        this.hudManager.deathEffect.start()
       }
     } catch (err) {
       if (this.errHandler.handle(err)) throw err
@@ -175,6 +200,19 @@ class RoundStatManager {
    */
   sameTeam(target: PlayerMp): boolean {
     return this.playerManager.getTeam(target) === this.playerManager.getTeam()
+  }
+
+  /**
+   * Notify a player about the damage
+   */
+  damageNotify(sourceEntity: PlayerMp, damage: number, weapon: RageEnums.Hashes.Weapon): void {
+    const { x, y, z } = this.player.position
+    const { x: targetX, y: targetY, z: targetZ } = sourceEntity.position
+    const distance = +(mp.game.system.vdist(x, y, z, targetX, targetY, targetZ)).toFixed(2)
+    const damageParams = { damage, weapon, distance }
+
+    this.hudManager.damage.addIncomingDamage(damageParams)
+    mp.events.callRemote(SHARED.EVENTS.CLIENT_DAMAGE_REQUEST_NOTIFY, sourceEntity.remoteId, JSON.stringify(damageParams))
   }
 }
 

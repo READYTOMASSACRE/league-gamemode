@@ -11,7 +11,8 @@ class PlayerDataValidator extends Validator<PlayerEditableData> {
    */
   protected validators: KeyValueCollection = {
     model: "number",
-    position: "vector"
+    position: "vector",
+    health: "number",
   }
 }
 

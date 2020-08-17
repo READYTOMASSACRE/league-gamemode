@@ -12,6 +12,7 @@ import { ErrorHandler } from "../core/ErrorHandler"
 import { VoteMapManager } from "./VoteMapManager"
 import { GroupManager } from "./GroupManager"
 import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
+import { DummyConfigManager } from "./dummies/DummyConfigManager"
 
 const [x, y, z] = app.getConfig().get('LOBBY')
 
@@ -32,6 +33,7 @@ class RoundManager {
   private voteTimer?: NodeJS.Timeout
 
   constructor(
+    readonly dummyConfig        : DummyConfigManager,           
     readonly dummyMapManager    : DummyMapManager,
     readonly weaponManager      : WeaponManager,
     readonly playerManager      : PlayerManager,
@@ -42,6 +44,7 @@ class RoundManager {
     readonly lang               : DummyLanguageManager
   ) {
     this.playerDeath          = this.playerDeath.bind(this)
+    this.clientPlayerDeath    = this.clientPlayerDeath.bind(this)
     this.playerQuit           = this.playerQuit.bind(this)
     this.roundStartCmd        = this.roundStartCmd.bind(this)
     this.roundEndCmd          = this.roundEndCmd.bind(this)
@@ -69,8 +72,31 @@ class RoundManager {
           if (killer) this.roundStatManager.addKill(killer)
           this.roundStatManager.addDeath(player)
         }
-        this.round.playerDeath(player, reason, killer)
+        this.round.playerDeath(player, reason)
         this.triggerRoundEndByPlayer(player, this.round)
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires an event when player is dead with configurable damage weapon
+   * @param {PlayerMp} player victim, the player who died
+   * @param {number}   reason cause hash of death
+   * @param {PlayerMp} killer who killed the player
+   */
+  @event(SHARED.EVENTS.CLIENT_PLAYER_DEATH)
+  clientPlayerDeath(player: PlayerMp, deathParams: string) {
+    try {
+      const { killerId }    = JSON.parse(deathParams)
+      const playerAt        = mp.players.at(killerId)
+      const killer          = mp.players.exists(playerAt) ? playerAt : undefined
+
+      if (killer && mp.players.exists(killer)) {
+        this.roundStatManager.addKill(killer)
       }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
@@ -329,16 +355,19 @@ class RoundManager {
       this.voteTimer = undefined
     }
 
+    const effects = this.dummyConfig.getEffects()
+
     /* create a new round */
     this.round = new Round({
-      roundTimeInterval: RoundManager.ROUND_TIME_INTERVAL,
-      lobby:             RoundManager.LOBBY,
-      mapId:             this.dummyMapManager.loadMap(mapIdOrCode, player || players).id,
-      weaponSet:         this.weaponManager.weaponSet,
-      dimension:         { round: RoundManager.ROUND_DIMENSION, lobby: RoundManager.LOBBY_DIMENSION },
-      dummyMapManager:   this.dummyMapManager,
-      players:           players,
-      playerManager:     this.playerManager,
+      roundTimeInterval   : RoundManager.ROUND_TIME_INTERVAL,
+      lobby               : RoundManager.LOBBY,
+      mapId               : this.dummyMapManager.loadMap(mapIdOrCode, player || players).id,
+      weaponSet           : this.weaponManager.weaponSet,
+      dimension           : { round: RoundManager.ROUND_DIMENSION, lobby: RoundManager.LOBBY_DIMENSION },
+      dummyMapManager     : this.dummyMapManager,
+      players             : players,
+      playerManager       : this.playerManager,
+      prepareTime         : effects.ROUND.PLAYING_SECONDS * 1000
     })
 
     this.round.start()

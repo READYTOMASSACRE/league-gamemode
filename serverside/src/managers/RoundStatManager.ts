@@ -1,7 +1,5 @@
 import { singleton, autoInjectable } from "tsyringe"
 import { event, eventable } from "rage-decorators"
-import { RoundStat, RoundKeyValueCollection } from "../db/domains/RoundStat"
-import { RoundStatRepo } from "../db/repos/RoundStatRepo"
 import { DummyPlayerRoundStatManager } from "./dummies/DummyPlayerRoundStatManager"
 import { logMethod, formatDate } from "../utils"
 import { DEBUG } from "../bootstrap"
@@ -10,7 +8,12 @@ import { PlayerProfileManager } from "./PlayerProfileManager"
 import { RoundStatUpdateError } from "../errors/PlayerErrors"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { DummyRoundStatManager } from "./dummies/DummyRoundStatManager"
-import { DomainConverter } from "../db/domains/DomainConverter"
+import { Round, RoundKeyValueCollection } from "../db/entity/Round"
+import { RoundRepository } from "../db/repos/RoundRepository"
+import { getCustomRepository } from "typeorm"
+import { DomainConverter } from "../db/entity/DomainConverter"
+import { InvalidTypeError } from "../errors/LogErrors"
+import { DummyConfigManager } from "./dummies/DummyConfigManager"
 
 type RoundHistory = {
   result: string
@@ -28,25 +31,31 @@ class RoundStatManager {
   /** @todo get data from config */
   static readonly ASSIST_SECONDS_EXPIRED = 15
 
-  private _roundStat?: RoundStat
+  public  repository?   : RoundRepository
+  private entity?       : Round
 
   constructor(
-    readonly repo: RoundStatRepo,
-    readonly dummyStatManager: DummyPlayerRoundStatManager,
-    readonly playerManager: PlayerManager,
-    readonly playerStatManager: PlayerProfileManager,
-    readonly errHandler: ErrorHandler,
-    readonly dummyRoundStatManager: DummyRoundStatManager,
+    readonly dummyConfig              : DummyConfigManager,
+    readonly dummyStatManager         : DummyPlayerRoundStatManager,
+    readonly playerManager            : PlayerManager,
+    readonly playerStatManager        : PlayerProfileManager,
+    readonly errHandler               : ErrorHandler,
+    readonly dummyRoundStatManager    : DummyRoundStatManager,
   ) {
     this.roundStart               = this.roundStart.bind(this)
     this.roundEnd                 = this.roundEnd.bind(this)
     this.playerRoundStatUpdate    = this.playerRoundStatUpdate.bind(this)
     this.assistUpdate             = this.assistUpdate.bind(this)
+    this.playerAdd                = this.playerAdd.bind(this)
+  }
+
+  load(): void {
+    this.repository = getCustomRepository(RoundRepository)
   }
 
   @event(SHARED.EVENTS.SERVER_ROUND_START)
   roundStart(startDate: Date, players: PlayerMp[]): void {
-    this._roundStat = RoundStat.create(+startDate, players)
+    this.entity = Round.create(+startDate, players)
   }
 
   /**
@@ -58,16 +67,24 @@ class RoundStatManager {
   @event(SHARED.EVENTS.SERVER_ROUND_END)
   async roundEnd(teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): Promise<void> {
     try {
-      this.roundStat.setWinner(teamWinner)
+      if (!this.entity) throw new InvalidTypeError("Round entity is not exists")
+
+      this.entity.setWinner(teamWinner)
       this.dummyRoundStatManager.setWinner(teamWinner)
 
-      const players = [...this.roundStat.state.ATTACKERS, ...this.roundStat.state.DEFENDERS]
-      await Promise.all([
-        this.playerStatManager.saveStats(players, teamWinner),
-        this.roundStat.save(this.repo),
-      ])
+      if (this.repository) {
+        const players = [...this.entity.state.ATTACKERS, ...this.entity.state.DEFENDERS]
+        await Promise.all([
+          this.playerStatManager.saveStats(players, teamWinner),
+          this.repository.save(this.entity),
+        ])
+      }
+
+      if (teamWinner) {
+        mp.players.call(SHARED.EVENTS.SERVER_ROUND_TEAMSCORE, [{ [teamWinner]: this.dummyRoundStatManager.getTeamScore(teamWinner) }])
+      }
   
-      delete this._roundStat
+      delete this.entity
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -86,6 +103,10 @@ class RoundStatManager {
   @event(SHARED.EVENTS.CLIENT_ROUND_STAT_UPDATE)
   playerRoundStatUpdate<K extends keyof RoundKeyValueCollection>(player: PlayerMp, key: K, value: SHARED.TYPES.PlayerRoundStatDTO[K]): void {
     try {
+      if (!this.entity) {
+        throw new RoundStatUpdateError(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING, player)
+      }
+      
       if (player.sharedData.state !== SHARED.STATE.ALIVE || typeof key !== 'string') {
         throw new RoundStatUpdateError(
           SHARED.MSG.ERR_INVALID_PLAYER_STATE,
@@ -98,7 +119,7 @@ class RoundStatManager {
       const update = !!Object
         .entries(data)
         .filter(([dtoKey, dtoValue]) => {
-          return this.roundStat.updatePlayerRoundData(player, dtoKey as K, dtoValue as SHARED.TYPES.PlayerRoundStatDTO[K])
+          return this.entity!.updatePlayerRoundData(player, dtoKey as K, dtoValue as SHARED.TYPES.PlayerRoundStatDTO[K])
         }).length
   
       if (update) {
@@ -143,6 +164,21 @@ class RoundStatManager {
   }
 
   /**
+   * Event
+   * 
+   * Fires from the serverside when a player has been added to the round
+   * @param {PlayerMp} player 
+   */
+  @event(SHARED.EVENTS.SERVER_ROUND_PLAYER_ADD)
+  playerAdd(player: PlayerMp): void {
+    try {
+      if (this.entity) this.entity.updatePlayerTeam(player)
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
    * Adding a new death to the player round stats
    * @param {PlayerMp} player 
    */
@@ -164,28 +200,12 @@ class RoundStatManager {
    */
   async getMatchesLastWeek(player: PlayerMp): Promise<RoundHistory[]> {
     try {
-      const matches = await this.repo.getMatchesLastWeekByPlayer(player)
+      if (!this.repository) return []
+
+      const matches = await this.repository.getMatchesLastWeek(player.rgscId)
       const lang = this.playerManager.getLang(player)
 
-      return matches.map(match => {
-        const roundStat = this.getDomain(match)
-        let result = 'Lost'
-        
-        if (roundStat.isDraw()) {
-          result = 'Draw'
-        } else if(roundStat.isPlayerWinner(player)) {
-          result = 'Won'
-        }
-  
-        const [k, d, a] = roundStat.getPlayerKDA(player)
-        const date = formatDate(match.created_at, lang)
-
-        return {
-          result,
-          date,
-          kda: `${k}/${d}/${a}`
-        }
-      })
+      return matches.map(match => this.formatCefMatch(player, match, lang))
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -193,12 +213,60 @@ class RoundStatManager {
     return []
   }
 
+  formatCefMatch(player: PlayerMp, round: Round, lang?: string): any {
+    if (typeof lang === 'undefined') {
+      lang = this.playerManager.getLang(player)
+    }
+
+    let result = 'Lost'
+    
+    if (round.isDraw()) {
+      result = 'Draw'
+    } else if(round.isPlayerWinner(player)) {
+      result = 'Won'
+    }
+
+    const [k, d, a] = round.getPlayerKDA(player)
+    const date = formatDate(round.created_at, lang)
+
+    return {
+      id: round.id,
+      result,
+      date,
+      kda: `${k}/${d}/${a}`
+    }
+  }
+
+  formatCefMatchDetail(player: PlayerMp, dto: SHARED.TYPES.RoundStatDTO, lang?: string): any {
+    if (typeof lang === 'undefined') {
+      lang = this.playerManager.getLang(player)
+    }
+
+    const att = this.dummyConfig.getTeamData(SHARED.TEAMS.ATTACKERS)
+    const def = this.dummyConfig.getTeamData(SHARED.TEAMS.DEFENDERS)
+
+    return {
+      winner: dto.winner,
+      created_at: formatDate(dto.created_at, lang),
+      [SHARED.TEAMS.ATTACKERS]: {
+        name: att.NAME,
+        color: att.COLOR,
+        players: dto[SHARED.TEAMS.ATTACKERS],
+      },
+      [SHARED.TEAMS.DEFENDERS]: {
+        name: def.NAME,
+        color: def.COLOR,
+        players: dto[SHARED.TEAMS.DEFENDERS],
+      }
+    }
+  }
+
   /**
    * Get the round stat domain
    * @param {SHARED.TYPES.RoundStatDTO} dto 
    */
-  getDomain(dto: SHARED.TYPES.RoundStatDTO): RoundStat {
-    return DomainConverter.fromDto(RoundStat, dto)
+  getDomain(dto: SHARED.TYPES.RoundStatDTO): Round {
+    return DomainConverter.fromDto(Round, dto)
   }
 
   /**
@@ -223,12 +291,6 @@ class RoundStatManager {
     }
 
     return payload
-  }
-
-  get roundStat(): RoundStat {
-    if (!this._roundStat) throw new TypeError("Invalid round stat")
-
-    return this._roundStat
   }
 }
 

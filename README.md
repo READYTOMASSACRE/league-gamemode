@@ -2,8 +2,30 @@
 **The TDM gamemode**, based on the GTA V [RAGE:MP](http://rage.mp/)
 **Discord**: [League,  RAGE:MP Gamemode](https://discord.gg/pwTZ6SS)
 
+### Requirements
+
+1. [MongoDB Community server](https://www.mongodb.com/try/download/community) v4.4.0 or above
+2. Setup the connection config.json (./serverside/assets/config.json)
+For example
+```json
+{
+  "DB": {
+    "HOSTNAME": "localhost",
+    "PORT": "27017",
+    "USERNAME": "root",
+    "PASSWORD": "root",
+    "DATABASE": "league"
+  }
+}
+```
 ### Installation
 
+If you don't have typescript compiler
+```bash
+$ yarn add global typescript
+```
+
+Install dependecies
 ```bash
 $ yarn
 ```

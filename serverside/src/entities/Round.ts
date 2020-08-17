@@ -15,6 +15,7 @@ interface RoundParams {
   dummyMapManager: DummyMapManager
   players: PlayerMp[]
   playerManager: PlayerManager
+  prepareTime: number
 }
 
 interface Round extends RoundParams {}
@@ -23,8 +24,11 @@ interface Round extends RoundParams {}
  * Class of the round
  */
 class Round {
-  private roundTimer?: NodeJS.Timeout
-  public roundStartDate: number = 0
+  private prepareTimer?   : NodeJS.Timeout
+  private roundTimer?     : NodeJS.Timeout
+  private started         : boolean = false
+
+  public roundStartDate   : number = 0
 
   constructor(params: RoundParams) {
     Object.assign(this, params)
@@ -35,13 +39,31 @@ class Round {
    * Event of starting round
    */
   @logMethod(DEBUG)
-  start(): void {
-    this.roundTimer       = setTimeout(this.end, this.roundTimeInterval)
-    this.roundStartDate   = Date.now()
+  start(): void {    
+    if (this.prepareTimer) {
+      clearTimeout(this.prepareTimer)
+      this.prepareTimer = undefined
+    }
 
     this.players.forEach(player => this.prepare(player))
+    
+    this.prepareTimer = setTimeout(() => {
+      this.roundTimer       = setTimeout(this.end, this.roundTimeInterval)
+      this.roundStartDate   = Date.now()
 
-    mp.events.call(SHARED.EVENTS.SERVER_ROUND_START, this.roundStartDate, this.players)
+      mp.players.call(this.players, SHARED.EVENTS.SERVER_ROUND_START, this.getStartedParams())
+      mp.events.call(SHARED.EVENTS.SERVER_ROUND_START, this.roundStartDate, this.players)
+      
+    }, this.prepareTime)
+
+    this.started = true
+  }
+
+  /**
+   * Get started params for sending data to client
+   */
+  getStartedParams(): any[] {
+    return [this.mapId, this.getPlayerIds(), this.getTimeleftMs()]
   }
 
   /**
@@ -59,6 +81,9 @@ class Round {
     this.players.forEach(player => this.prepareEnd(player))
 
     mp.events.call(SHARED.EVENTS.SERVER_ROUND_END, teamWinner)
+    mp.players.call(SHARED.EVENTS.SERVER_ROUND_END, [teamWinner])
+
+    this.started = false
   }
 
   /**
@@ -77,11 +102,8 @@ class Round {
   pause(): void {
     if (this.roundTimer) clearTimeout(this.roundTimer)
 
-    this.roundTimer = undefined
-
-    const currentDate         = Date.now()
-    const timePassedMs        = currentDate - this.roundStartDate
-    this.roundTimeInterval    = this.roundTimeInterval - timePassedMs
+    this.roundTimer           = undefined
+    this.roundTimeInterval    = this.roundTimeInterval - this.getTimeleftMs()
 
     this.players.forEach(player => player.call(SHARED.EVENTS.SERVER_ROUND_PAUSE, [true]))
   }
@@ -111,11 +133,11 @@ class Round {
     this.playerManager.setState(player, SHARED.STATE.ALIVE)
     this.playerManager.spawn(player, vector)
 
-    player.call(SHARED.EVENTS.SERVER_ROUND_START, [this.mapId, this.players.map(ppl => ppl.id), this.roundTimeInterval])
+    player.health = 99
 
-    if (!hasAdded) {
-      this.playerManager.success(player, SHARED.MSG.ROUND_START_MESSAGE, this.mapId.toString())
-    }
+    player.call(SHARED.EVENTS.SERVER_ROUND_PREPARE, [this.mapId, hasAdded])
+
+    if (!hasAdded) this.playerManager.success(player, SHARED.MSG.ROUND_START_MESSAGE, this.mapId.toString())
 
     return true
   }
@@ -126,7 +148,7 @@ class Round {
    */
   prepareEnd(player: PlayerMp, hasRemoved: boolean = false): boolean {
     player.dimension = this.dimension.lobby
-    player.call(SHARED.EVENTS.SERVER_ROUND_END, [this.mapId])
+    player.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_REMOVE, [])
 
     this.playerManager.setState(player, SHARED.STATE.IDLE)
     this.playerManager.spawn(player, this.lobby)
@@ -148,6 +170,9 @@ class Round {
     const hasAdded = true
     this.players = [...this.players, player]
     this.prepare(player, hasAdded)
+
+    mp.players.call(this.players, SHARED.EVENTS.SERVER_ROUND_START, this.getStartedParams())
+    mp.events.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_ADD, player)
 
     return true
   }
@@ -221,6 +246,13 @@ class Round {
   }
 
   /**
+   * Get players' id
+   */
+  getPlayerIds(): number[] {
+    return this.players.map(player => player.id)
+  }
+
+  /**
    * Get team winner
    */
   getTeamWinner(): SHARED.TEAMS | false {
@@ -235,10 +267,20 @@ class Round {
   }
 
   /**
+   * Get round time left
+   */
+  getTimeleftMs(): number {
+    const currentDate   = Date.now()
+    const timePassedMs  = currentDate - this.roundStartDate
+
+    return this.roundTimeInterval - timePassedMs
+  }
+
+  /**
    * Getter of the current state round of the round
    */
   get isRunning(): boolean {
-    return this.roundStartDate > 0
+    return this.started
   }
 
   /**

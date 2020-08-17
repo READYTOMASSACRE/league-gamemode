@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 export function useInterval(callback: Function, delay: number) {
   const savedCallback = useRef<Function>()
@@ -35,4 +35,37 @@ export function escapeRegExp(string: string) {
  */
 export function getRandomInt(max: number): number {
   return Math.floor(Math.random() * Math.floor(max))
+}
+
+export function useThrottle(fn: Function, timeout: number = 300) {
+  const [ready, setReady] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  if (!fn || typeof fn !== "function") {
+    throw new Error(
+      "As a first argument, you need to pass a function to useThrottle hook."
+    );
+  }
+
+  const throttledFn = useCallback(
+    (...args) => {
+      if (!ready) {
+        return;
+      }
+
+      setReady(false);
+      fn(...args)
+    },
+    [ready, fn]
+  );
+
+  useEffect(() => {
+    if (!ready) {
+      timerRef.current = setTimeout(() => {
+        setReady(true)
+      }, timeout)
+      return () => timerRef.current && clearTimeout(timerRef.current)
+    }
+  }, [ready, timeout])
+  return [throttledFn, ready]
 }

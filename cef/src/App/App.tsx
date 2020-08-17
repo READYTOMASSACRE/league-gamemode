@@ -6,6 +6,7 @@ import InfoPanelWrapper from '../InfoPanel/InfoPanelWrapper';
 import NotifyNotistack from '../Notify/NotifyNotistack';
 import GameMenu from '../GameMenu/GameMenu';
 import DeathlogList from '../Deathlog/DeathlogList';
+import Effects from '../Effects/Effects';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <InfoPanelWrapper />
       <DeathlogList />
       <main className="App-header">
+        <Effects />
         <WeaponDialog />
         <ScoreboardData />
         <NotifyNotistack />

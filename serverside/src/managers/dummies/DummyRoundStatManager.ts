@@ -60,6 +60,14 @@ class DummyRoundStatManager implements INTERFACES.Manager {
     this.update(dto)
   }
 
+  getTeamScore(teamId: SHARED.TEAMS): number {
+    if (teamId === SHARED.TEAMS.SPECTATORS) {
+      throw new InvalidTypeError("Wrong team id")
+    }
+
+    return this.dummy.data[teamId].score
+  }
+
   get dummy() {
     if (!this._dummy) throw new IsNotExistsError("Dummy not found")
 

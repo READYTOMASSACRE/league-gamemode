@@ -1,8 +1,8 @@
 import { Dummy } from "../../entities/Dummy"
 import { singleton, autoInjectable } from "tsyringe"
 import { eventable, event } from "rage-decorators"
-import { RoundStat } from "../../db/domains/RoundStat"
 import { IsNotExistsError } from "../../errors/LogErrors"
+import { Round } from "../../db/entity/Round"
 
 /**
  * Class to manage player round stats through the dummies
@@ -25,7 +25,9 @@ class DummyPlayerRoundStatManager {
    */
   playerReady(player: PlayerMp) {
     if (!this.dummies.get(player.id)) {
-      const dto   = RoundStat.getDefault()
+      const dto   = Round.getDefault()
+
+      dto.name    = player.name
       dto.id      = player.id
       dto.rgscId  = player.rgscId
 
@@ -78,7 +80,7 @@ class DummyPlayerRoundStatManager {
       throw new IsNotExistsError("Invalid dto id")
     }
     const dummyInstance = this.get(dto.id)
-    const newDto = RoundStat.mergePlayer(dummyInstance.getData(), dto)
+    const newDto = Round.mergePlayer(dummyInstance.getData(), dto)
 
     dummyInstance.update(newDto)
   }

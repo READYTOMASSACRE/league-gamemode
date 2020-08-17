@@ -3,8 +3,15 @@
   "RCON": "changeme",
   "LANGUAGE": "en",
   "LOBBY": [-1026.7474365234375, -364.5588073730469, 36.930908203125],
-  "DB_PATH": "./packages/league/assets/pouchdb",
+  "DB": {
+    "HOSTNAME": "localhost",
+    "PORT": "27017",
+    "USERNAME": "root",
+    "PASSWORD": "",
+    "DATABASE": "league"
+  },
   "ROUND_TIME_INTERVAL_MINUTES": 5,
+  "AUTOLOGIN": false,
   "WEAPONS": {
     "MELEE": ["weapon_dagger", "weapon_bat", "weapon_bottle", "weapon_crowbar", "weapon_flashlight", "weapon_golfclub", "weapon_nightstick", "weapon_knuckle"],
     "HANDGUNS": ["weapon_pistol", "weapon_combatpistol", "weapon_pistol50", "weapon_heavypistol", "weapon_revolver_mk2"],
@@ -19,6 +26,19 @@
     ["HANDGUNS", "SUBMACHINE", "SHOTGUNS", "RIFLES", "LIGHT_RIFLES", "SNIPER_RIFLES"],
     ["HANDGUNS", "SUBMACHINE", "SHOTGUNS", "RIFLES", "LIGHT_RIFLES", "SNIPER_RIFLES"]
   ],
+  "WEAPON_DAMAGE": {
+    "GROUP": {
+      "HANDGUNS": 13,
+      "SUBMACHINE": 9,
+      "SHOTGUNS": 37,
+      "RIFLES": 10,
+      "LIGHT_RIFLES": 10,
+      "SNIPER_RIFLES": 41
+    },
+    "SPECIFIC": {
+      "weapon_revolver_mk2": 46
+    }
+  },
   "TEAMS": {
     "ATTACKERS": {
       "NAME": "Scourge",
@@ -80,6 +100,18 @@
           "EMPTY": [226, 14, 15]
         }
       }
+    },
+    "DAMAGE": {
+      "TIME": 5
+    }
+  },
+  "EFFECTS": {
+    "DEATH": {
+      "PLAYING_SECONDS": 3
+    },
+    "ROUND": {
+      "PLAYING_SECONDS": 5,
+      "PLAYING_END_SECONDS": 2
     }
   }
 }

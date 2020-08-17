@@ -9,9 +9,9 @@ export default function Changes030() {
       + Added Controls hud element<br />
       + Added Gamemode hud element<br />
       + Added Deathlog hud element<br />
-      + Added round pause and pause commands:<br />
+      + Added round pause and unpause commands:<br />
       /pause - Pause a round when the round is running<br />
-      /unpuase - Unpause a round when the round is running<br />
+      /unpause - Unpause a round when the round is running<br />
       + Added change team command:<br />
       /ct [id|nickname] [att|def|spec] - Change a team by player id/nickname, alias /changeteam<br />
       + Added add/remove in/from a round:<br />
