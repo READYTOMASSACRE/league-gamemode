@@ -133,8 +133,6 @@ class Round {
     this.playerManager.setState(player, SHARED.STATE.ALIVE)
     this.playerManager.spawn(player, vector)
 
-    player.health = 99
-
     player.call(SHARED.EVENTS.SERVER_ROUND_PREPARE, [this.mapId, hasAdded])
 
     if (!hasAdded) this.playerManager.success(player, SHARED.MSG.ROUND_START_MESSAGE, this.mapId.toString())
