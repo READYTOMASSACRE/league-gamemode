@@ -55,7 +55,7 @@ class DbManager implements INTERFACES.Manager {
 
     statSync(path)
 
-    return path + "\\*.js"
+    return path + "/*.js"
   }
 }
 

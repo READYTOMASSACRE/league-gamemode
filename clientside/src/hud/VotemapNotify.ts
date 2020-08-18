@@ -45,10 +45,9 @@ class VotemapNotify extends Hud {
    * @inheritdoc
    */
   tick(): void {
-    const pausedDate      = Date.now()
-    const timePassed      = Math.round((pausedDate - this.voteStart) / 1000)
+    const timePassed    = Math.round((Date.now() - this.voteStart) / 1000)
+    this.secondInterval = this.dummyConfig.getVoteIntervalSeconds() - timePassed
 
-    this.secondInterval   = this.secondInterval - timePassed
     if (this.secondInterval < 0) this.stop()
   }
 
