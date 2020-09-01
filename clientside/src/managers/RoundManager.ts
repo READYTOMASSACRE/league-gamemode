@@ -5,7 +5,7 @@ import { DialogManager } from './DialogManager'
 import { singleton, autoInjectable } from 'tsyringe'
 import { DummyMapManager } from './dummies/DummyMapManager'
 import { DummyConfigManager } from './dummies/DummyConfigManager'
-import { event, eventable } from 'rage-decorators'
+import { event, eventable, command, commandable } from 'rage-decorators'
 import { ErrorHandler } from '../core/ErrorHandler'
 import { HudManager } from './HudManager'
 import { InfoPanel } from '../hud/RoundInfo'
@@ -13,17 +13,20 @@ import { PlayerManager } from './PlayerManager'
 import { DummyLanguageManager } from './dummies/DummyLanguageManager'
 import { DummyRoundStatManager } from './dummies/DummyRoundStatManager'
 import { NotFoundNotifyError } from '../errors/PlayerErrors'
-import { print } from '../utils'
+import { InteractionManager } from './InteractionManager'
 
 /**
  * Class to manage the round
  */
 @singleton()
 @eventable()
+@commandable()
 @autoInjectable()
 class RoundManager {
-  public map?: TYPES.GameMap
-  public zone?: Zone
+  public map?         : TYPES.GameMap
+  public zone?        : Zone
+
+  private isRunning   : boolean = false
 
   constructor(
     readonly mapManager           : GameMapManager,
@@ -36,39 +39,38 @@ class RoundManager {
     readonly playerManager        : PlayerManager,
     readonly lang                 : DummyLanguageManager,
     readonly statManager          : DummyRoundStatManager,
+    readonly interactionManager   : InteractionManager,
   ) {
-    this.prepare      = this.prepare.bind(this)
-    this.start        = this.start.bind(this)
-    this.end          = this.end.bind(this)
-    this.pause        = this.pause.bind(this)
-    this.teamscore    = this.teamscore.bind(this)
-    this.remove       = this.remove.bind(this)
+    this.prepare          = this.prepare.bind(this)
+    this.start            = this.start.bind(this)
+    this.end              = this.end.bind(this)
+    this.pause            = this.pause.bind(this)
+    this.teamscore        = this.teamscore.bind(this)
+    this.remove           = this.remove.bind(this)
+    this.deathOrRemove    = this.deathOrRemove.bind(this)
+    this.spectate         = this.spectate.bind(this)
+    this.playerJoin       = this.playerJoin.bind(this)
   }
 
   /**
    * Event
    * 
-   * Fires when the round has prepared
+   * Fires when the round has start the prepared timer
    * @param {number} mapId - the id of map
    */
   @event(SHARED.EVENTS.SERVER_ROUND_PREPARE)
-  prepare(mapId?: number, hasAdded?: boolean): void {
+  prepare(mapId?: number): void {
     try {
       if (typeof mapId === 'undefined') {
         throw new NotFoundNotifyError(SHARED.MSG.ERR_NOT_FOUND)
       }
 
-      const map       = this.dummyMapManager.loadMap(mapId)
-      const zone      = new Zone(map)
-      const config    = this.dummyConfigManager.dummy
+      this.map        = this.dummyMapManager.loadMap(mapId)
+      this.zone       = new Zone(this.map)
+      this.isRunning  = true
 
-      this.mapManager.drawZone(map)
-      this.zoneManager.inspect(zone)
-      if (!hasAdded) this.playerManager.freeze(true)
-
-      this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_OPEN, config.data.WEAPON_SET)
-
-      this.enableRoundHud(map, hasAdded)
+      this.playerManager.freeze(true)
+      this.hudManager.roundStartEffect.start(this.map.code, this.zone.center())
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -80,14 +82,18 @@ class RoundManager {
    * Fires when the round has started
    * @param {number} mapId - the id of map
    */
-  @event(SHARED.EVENTS.SERVER_ROUND_START)
+  @event([SHARED.EVENTS.SERVER_ROUND_START, SHARED.EVENTS.SERVER_ROUND_PLAYER_ADD])
   start(mapId: number, playerIds: number[], timePassedMs: number): void {
     try {
-      const map   = this.dummyMapManager.loadMap(mapId)
-      const data  = this.getRoundInfoData(map, playerIds)
+      if (!this.map) this.map = this.dummyMapManager.loadMap(mapId)
+      if (!this.zone) this.zone = new Zone(this.map)
 
-      this.hudManager.roundInfo.roundStart(data, timePassedMs)
+      this.mapManager.drawZone(this.map)
+      this.zoneManager.inspect(this.zone)
+      const config    = this.dummyConfigManager.dummy
+      this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_OPEN, config.data.WEAPON_SET)
       this.playerManager.freeze(false)
+      this.enableRoundHud(timePassedMs, playerIds)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -102,6 +108,10 @@ class RoundManager {
   end(winner?: SHARED.TEAMS): void {
     try {
       this.hudManager.roundStopEffect.start(winner)
+      this.interactionManager.getSpectate().setPlayersVisible()
+      this.hudManager.roundInfo.roundStop()
+
+      this.isRunning = false
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -112,16 +122,53 @@ class RoundManager {
    * 
    * Fires a player has been removed from the round
    */
-  @event(SHARED.EVENTS.SERVER_ROUND_PLAYER_REMOVE)
+  @event([SHARED.EVENTS.SERVER_ROUND_PLAYER_REMOVE, SHARED.EVENTS.SERVER_ROUND_PLAYER_DEATH, SHARED.EVENTS.SERVER_ROUND_END])
   remove(): void {
     try {
       this.mapManager.clearZone()
       this.zoneManager.stopInspect()
       this.dialogManager.call(SHARED.RPC_DIALOG.CLIENT_WEAPON_DIALOG_CLOSE)
-
       this.disableRoundHud()
 
       this.playerManager.freeze(false)
+
+      this.map = undefined
+      this.zone = undefined
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires a player has been removed from the round
+   */
+  @event([SHARED.EVENTS.SERVER_ROUND_PLAYER_REMOVE, SHARED.EVENTS.SERVER_ROUND_PLAYER_DEATH])
+  deathOrRemove(): void {
+    try {
+      // this.interactionManager.getSpectate().enable()
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+
+
+  /**
+   * Event
+   * 
+   * Fires when a player has connected to the server
+   */
+  @event(SHARED.EVENTS.SERVER_ROUND_PlAYER_JOIN)
+  playerJoin(mapId: number, playerIds: number[], timePassedMs: number): void {
+    try {
+      if (!this.map) this.map = this.dummyMapManager.loadMap(mapId)
+
+      const data = this.getRoundInfoData(this.map, playerIds)
+      this.hudManager.roundInfo.roundStart(data, timePassedMs)
+
+      this.isRunning = true
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -133,22 +180,27 @@ class RoundManager {
    * @param {number[]} playerIds - current players in the round
    * @param {number} roundTimeIntervalMs - time of the round in miliseconds
    */
-  enableRoundHud(map: TYPES.GameMap, hasAdded: boolean = false): void {
+  enableRoundHud(timePassedMs: number, playerIds: number[] = []): void {
     this.hudManager.votemapNotify.stop()
     this.hudManager.roundStopEffect.stop()
     this.hudManager.damage.start()
+    this.interactionManager.getSpectate().disable()
+    this.hudManager.spectateViewers.start()
 
-    if (hasAdded === false) this.hudManager.roundStartEffect.start(map.code)
+    if (this.map) {
+      const data = this.getRoundInfoData(this.map, playerIds)
+      this.hudManager.roundInfo.roundStart(data, timePassedMs)
+    }
   }
 
   /**
    * Disable round hud
-   * @param {SHARED.TEAMS} winner (optional) 
    */
   disableRoundHud(): void {
-    this.hudManager.roundInfo.roundStop()
     this.hudManager.damage.stop()
     this.hudManager.roundStartEffect.stop()
+    this.hudManager.spectateViewers.stop()
+    this.interactionManager.getSpectate().disable()
   }
 
   /**
@@ -182,6 +234,32 @@ class RoundManager {
         this.hudManager.roundInfo.startPause()
       } else {
         this.hudManager.roundInfo.stopPause()
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  @command(["spec", "spectate"])
+  spectate(cmdDesc: string, playerIdOrName?: string): void {
+    try {
+      if (!this.isRunning) {
+        this.hudManager.notifyChat(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING) 
+        return
+      }
+      if (this.playerManager.getState() === SHARED.STATE.ALIVE) {
+        this.hudManager.notifyChat(SHARED.MSG.ERR_PLAYER_IN_ROUND)
+        return
+      }
+
+      this.interactionManager.toggleSpectate(playerIdOrName)
+
+      const isEnabled = this.interactionManager.getSpectate().isEnabled()
+      if (isEnabled && !this.playerManager.hasState(SHARED.STATE.SPECTATE)) {
+        this.playerManager.setState(SHARED.STATE.SPECTATE)
+      } else if (isEnabled === false) {
+        this.playerManager.setState(SHARED.STATE.IDLE)
+        this.playerManager.spawnInLobby()
       }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err

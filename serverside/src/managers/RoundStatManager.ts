@@ -65,7 +65,7 @@ class RoundStatManager {
    * @param teamWinner - id of team winner
    */
   @event(SHARED.EVENTS.SERVER_ROUND_END)
-  async roundEnd(teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): Promise<void> {
+  async roundEnd(teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false, playersInRound: PlayerMp[]): Promise<void> {
     try {
       if (!this.entity) throw new InvalidTypeError("Round entity is not exists")
 
@@ -75,7 +75,7 @@ class RoundStatManager {
       if (this.repository) {
         const players = [...this.entity.state.ATTACKERS, ...this.entity.state.DEFENDERS]
         await Promise.all([
-          this.playerStatManager.saveStats(players, teamWinner),
+          this.playerStatManager.saveStats(players, teamWinner, playersInRound),
           this.repository.save(this.entity),
         ])
       }
@@ -104,14 +104,19 @@ class RoundStatManager {
   playerRoundStatUpdate<K extends keyof RoundKeyValueCollection>(player: PlayerMp, key: K, value: SHARED.TYPES.PlayerRoundStatDTO[K]): void {
     try {
       if (!this.entity) {
-        throw new RoundStatUpdateError(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING, player)
+        if (DEBUG) {
+          throw new InvalidTypeError(SHARED.MSG.ERR_ROUND_IS_NOT_RUNNING)
+        } else {
+          return
+        }
       }
       
       if (player.sharedData.state !== SHARED.STATE.ALIVE || typeof key !== 'string') {
-        throw new RoundStatUpdateError(
-          SHARED.MSG.ERR_INVALID_PLAYER_STATE,
-          player
-        )
+        if (DEBUG) {
+          throw new InvalidTypeError(SHARED.MSG.ERR_INVALID_PLAYER_STATE)
+        } else {
+          return
+        }
       }
   
       const data = this.prepareParams(key, value)
@@ -192,6 +197,8 @@ class RoundStatManager {
    */
   addKill(player: PlayerMp) {
     this.playerRoundStatUpdate(player, "kill", 1)
+    const profile = this.playerStatManager.getDomain(player)
+    profile.addKillExperience()
   }
 
   /**

@@ -10,6 +10,7 @@ import { PlayerProfileManager } from "./PlayerProfileManager"
 import { RoundStatManager } from "./RoundStatManager"
 import { CEFProfileDTO } from "../db/entity/Profile"
 import { ObjectID } from "typeorm"
+import { PlayerManager } from "./PlayerManager"
 
 /**
  * Class to manage RPC class
@@ -24,14 +25,17 @@ class RpcManager implements INTERFACES.Manager {
     readonly profileManager: PlayerProfileManager,
     readonly roundStatManager: RoundStatManager,
     readonly errHandler: ErrorHandler,
+    readonly playerManager: PlayerManager,
   ) {
-    this.clientWeaponRequest        = this.clientWeaponRequest.bind(this)
-    this.clientPingRequest          = this.clientPingRequest.bind(this)
-    this.cefGamemenuProfile         = this.cefGamemenuProfile.bind(this)
-    this.cefGamemenuPlayers         = this.cefGamemenuPlayers.bind(this)
-    this.cefGamemenuHistory         = this.cefGamemenuHistory.bind(this)
-    this.cefGamemenuTop             = this.cefGamemenuTop.bind(this)
-    this.cefGamemenuVoteNominate    = this.cefGamemenuVoteNominate.bind(this)
+    this.clientWeaponRequest            = this.clientWeaponRequest.bind(this)
+    this.clientPingRequest              = this.clientPingRequest.bind(this)
+    this.cefGamemenuProfile             = this.cefGamemenuProfile.bind(this)
+    this.cefGamemenuPlayers             = this.cefGamemenuPlayers.bind(this)
+    this.cefGamemenuHistory             = this.cefGamemenuHistory.bind(this)
+    this.cefGamemenuTop                 = this.cefGamemenuTop.bind(this)
+    this.cefGamemenuVoteNominate        = this.cefGamemenuVoteNominate.bind(this)
+    this.clientPlayerPositionRequest    = this.clientPlayerPositionRequest.bind(this)
+    this.clientSetPlayerDataRequest     = this.clientSetPlayerDataRequest.bind(this)
   }
 
   /**
@@ -49,6 +53,10 @@ class RpcManager implements INTERFACES.Manager {
     register(SHARED.RPC.CEF_GAMEMENU_HISTORY, this.cefGamemenuHistory)
     register(SHARED.RPC.CEF_GAMEMENU_TOP, this.cefGamemenuTop)
     register(SHARED.RPC.CEF_GAMEMENU_VOTE_NOMINATE, this.cefGamemenuVoteNominate)
+
+    // playerManager
+    register(SHARED.RPC.CLIENT_PLAYER_POSITION, this.clientPlayerPositionRequest)
+    register(SHARED.RPC.CLIENT_SET_PLAYER_DATA, this.clientSetPlayerDataRequest)
   }
 
   /**
@@ -200,6 +208,43 @@ class RpcManager implements INTERFACES.Manager {
       return this.roundManager.vote(player as PlayerMp, id)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * RPC Call
+   * 
+   * Fires from the clientside when a client has requested a player's position
+   * @param {number} id 
+   */
+  clientPlayerPositionRequest(id: number): [Vector3Mp, number] | [false] {
+    const player = mp.players.at(id)
+
+    if (!player || !mp.players.exists(player)) {
+      return [false]
+    }
+
+    console.debug(`${player.name}'s dimensions is: ${player.dimension}`)
+
+    return [player.position, player.dimension]
+  }
+
+  /**
+   * RPC Call
+   * 
+   * Fires from the clientside to set player's data
+   */
+  clientSetPlayerDataRequest(payload: string, listener: rpc.ProcedureListenerInfo): boolean {
+    try {
+      const { player } = listener
+
+      this.playerManager.setPlayerData(player as PlayerMp, payload)
+
+      return true
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+
+      return false
     }
   }
 }

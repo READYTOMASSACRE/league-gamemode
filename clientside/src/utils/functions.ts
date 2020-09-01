@@ -23,6 +23,9 @@ String.prototype.padding = function(n: number, c?: string): string {
   return (n < 0) ? pad + val : val + pad
 }
 
+const bindedHoldedHandlers: { [keyCode: number]: Function[] } = {}
+const bindedHandlers: { [keyCode: number]: Function[] } = {}
+
 /**
  * Bind the handler by key in to the Rage API
  * @param {number[]} keys - key code
@@ -30,7 +33,25 @@ String.prototype.padding = function(n: number, c?: string): string {
  * @param {Function} handler 
  */
 function keyBind(keys: number[], keyHold: boolean, handler: Function): void {
-  keys.forEach(keycode => mp.keys.bind(keycode, keyHold, handler))
+  keys.forEach(keycode => {
+    if (typeof bindedHoldedHandlers[keycode] === 'undefined') bindedHoldedHandlers[keycode] = []
+    if (typeof bindedHandlers[keycode] === 'undefined') bindedHandlers[keycode] = []
+
+    let finded = keyHold
+      ? bindedHoldedHandlers[keycode].find(func => func === handler)
+      : bindedHandlers[keycode].find(func => func === handler)
+
+    // try to avoid double binding similar handlers
+    if (typeof finded !== 'undefined') return
+
+    mp.keys.bind(keycode, keyHold, handler)
+
+    if (keyHold) {
+      bindedHoldedHandlers[keycode].push(handler)
+    } else {
+      bindedHandlers[keycode].push(handler)
+    }
+  })
 }
 
 /**
@@ -41,8 +62,16 @@ function keyBind(keys: number[], keyHold: boolean, handler: Function): void {
  */
 function keyUnbind(keys: number[], keyHold: boolean, handler?: Function): void {
   keys.forEach(keycode => {
-    mp.keys.unbind(keycode, true, handler)
-    mp.keys.unbind(keycode, false, handler)
+    if (typeof bindedHoldedHandlers[keycode] === 'undefined') bindedHoldedHandlers[keycode] = []
+    if (typeof bindedHandlers[keycode] === 'undefined') bindedHandlers[keycode] = []
+
+    if (keyHold) {
+      bindedHoldedHandlers[keycode] = bindedHoldedHandlers[keycode].filter(func => func !== handler)
+    } else {
+      bindedHandlers[keycode] = bindedHandlers[keycode].filter(func => func !== handler)
+    }
+
+    mp.keys.unbind(keycode, keyHold, handler)
   })
 }
 
@@ -114,4 +143,85 @@ function getWeaponName(hash: RageEnums.Hashes.Weapon): string {
   return weapons[hash]
 }
 
-export { keyBind, keyUnbind, logbrowser, hex2rgba, colorGradient, getFormattedCurrentTime, getWeaponName }
+interface ThrottleSettings {
+
+  /**
+  * If you'd like to disable the leading-edge call, pass this as false.
+  **/
+  leading?: boolean;
+
+  /**
+  * If you'd like to disable the execution on the trailing-edge, pass false.
+  **/
+  trailing?: boolean;
+}
+interface Cancelable {
+  cancel(): void;
+}
+// Returns a function, that, when invoked, will only be triggered at most once
+// during a given window of time. Normally, the throttled function will run
+// as much as it can, without ever going more than once per `wait` duration;
+// but if you'd like to disable the execution on the leading edge, pass
+// `{leading: false}`. To disable execution on the trailing edge, ditto.
+function throttle<T extends Function>(
+  func: T,
+  wait: number,
+  options?: ThrottleSettings): T & Cancelable {
+  var timeout: any, context: any, args: any, result: any
+  var previous = 0
+  if (!options) options = {}
+
+  var later = function() {
+    previous = options!.leading === false ? 0 : Date.now()
+    timeout = null
+    result = func.apply(context, args)
+    if (!timeout) context = args = null
+  };
+
+  var throttled: any = function() {
+    var _now = Date.now()
+    if (!previous && options!.leading === false) previous = _now
+    var remaining = wait - (_now - previous)
+    // @ts-ignore
+    context = this
+    args = arguments
+    if (remaining <= 0 || remaining > wait) {
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+      previous = _now
+      result = func.apply(context, args)
+      if (!timeout) context = args = null
+    } else if (!timeout && options!.trailing !== false) {
+      timeout = setTimeout(later, remaining)
+    }
+    return result
+  };
+
+  throttled.cancel = function() {
+    clearTimeout(timeout)
+    previous = 0
+    timeout = context = args = null
+  }
+
+  return throttled
+}
+
+/**
+ * Escape a regexp pattern
+ * @param {string} string 
+ */
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+/**
+ * Check if parameter is number
+ * @param {string} n 
+ */
+function isNumber(n: string) {
+  return !isNaN(parseFloat(n)) && !isNaN(+n - 0)
+}
+
+export { keyBind, keyUnbind, logbrowser, hex2rgba, colorGradient, getFormattedCurrentTime, getWeaponName, throttle, escapeRegExp, isNumber }

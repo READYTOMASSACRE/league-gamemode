@@ -24,6 +24,9 @@ interface WinState {
   color?: string
 }
 
+/**
+ * Play a win effect after round is end
+ */
 export default function WinEffect() {
   const [render, setRender]   = React.useState(false)
   const [state, setState]     = React.useState<WinState>({ way: false, color: '#03a9f4' })
@@ -50,7 +53,6 @@ export default function WinEffect() {
 
   const animation = state.way === 'in' ? 'bounceIn' : 'bounceOut'
 
-  console.log('RENDER', animation, state)
   return (
     <Typography
       variant="overline"

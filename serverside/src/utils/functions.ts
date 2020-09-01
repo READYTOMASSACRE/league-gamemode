@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, writeFileSync } from 'fs'
 import { magenta } from 'colors'
 import { inspect } from 'util'
 import { createHash } from 'crypto'
@@ -22,6 +22,14 @@ function getJsonFromFileSync(path: string): any {
   } catch (err) {
     console.error('getJsonFromFileSync:', err)
     return null
+  }
+}
+
+function putJsonToFileSync(path: string, data: string): any {
+  try {
+    return writeFileSync(path, data)
+  } catch (err) {
+    console.error('putJsonToFileSync:', err)
   }
 }
 
@@ -113,6 +121,7 @@ export {
   getProjectDir,
   getSrcDir,
   getJsonFromFileSync,
+  putJsonToFileSync,
   logWrapper,
   getFormattedCurrentTime,
   keys,

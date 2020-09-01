@@ -37,12 +37,12 @@ class PlayerManager extends EntityBase<PlayerMp> {
 
     this.playerReady          = this.playerReady.bind(this)
     this.playerDeath          = this.playerDeath.bind(this)
-    this.clientPlayerDeath    = this.clientPlayerDeath.bind(this)
     this.spawnInLobby         = this.spawnInLobby.bind(this)
     this.setSharedData        = this.setSharedData.bind(this)
     this.playerChat           = this.playerChat.bind(this)
     this.playerJoin           = this.playerJoin.bind(this)
     this.playerQuit           = this.playerQuit.bind(this)
+    this.setPlayerData        = this.setPlayerData.bind(this)
   }
 
   /**
@@ -78,29 +78,7 @@ class PlayerManager extends EntityBase<PlayerMp> {
   @event(RageEnums.EventKey.PLAYER_DEATH)
   playerDeath(player: PlayerMp, reason: number, killer?: PlayerMp): void {
     try {
-      this.playerDeathHandle(player, reason, killer)
       return this.spawnInLobby(player)
-    } catch (err) {
-      if (!this.errHandler.handle(err)) throw err
-    }
-  }
-
-  /**
-   * Event
-   * 
-   * Fires an event when player is dead with configurable damage weapon
-   * @param {PlayerMp} player victim, the player who died
-   * @param {number}   reason cause hash of death
-   * @param {PlayerMp} killer who killed the player
-   */
-  @event(SHARED.EVENTS.CLIENT_PLAYER_DEATH)
-  clientPlayerDeath(player: PlayerMp, deathParams: string): void {
-    try {
-      const { killerId, reason }  = JSON.parse(deathParams)
-      const playerAt              = mp.players.at(killerId)
-      const killer                = mp.players.exists(playerAt) ? playerAt : undefined
-
-      this.playerDeathHandle(player, reason, killer)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -112,9 +90,10 @@ class PlayerManager extends EntityBase<PlayerMp> {
    * @param {number} reason 
    * @param {PlayerMp} killer (optional)
    */
-  playerDeathHandle(player: PlayerMp, reason: number, killer?: PlayerMp): void {
+  playerDeathNotify(player: PlayerMp, reason: number, killer?: PlayerMp): void {
     if (
-      killer
+      this.hasState(player, SHARED.STATE.ALIVE)
+      && killer
       && mp.players.exists(killer)
       && this.hasState(killer, [SHARED.STATE.ALIVE])
     ) {
@@ -184,7 +163,11 @@ class PlayerManager extends EntityBase<PlayerMp> {
       const dto = JSON.parse(data)
   
       if (typeof dto !== 'object') return
-  
+
+      if (typeof dto.position === 'object') {
+        dto.position = new mp.Vector3(dto.position.x, dto.position.y, dto.position.z)
+      }
+
       const playerValidator = new PlayerDataValidator(dto)
   
       if (playerValidator.isValid()) {
@@ -314,10 +297,11 @@ class PlayerManager extends EntityBase<PlayerMp> {
   initData(player: PlayerMp): void {
     super.initData(player)
 
-    player.sharedData.group   = SHARED.GROUP.USER
-    player.sharedData.state   = SHARED.STATE.SELECT
-    player.sharedData.teamId  = SHARED.TEAMS.SPECTATORS
-    player.sharedData.lang    = this.config.get('LANGUAGE')
+    player.sharedData.group       = SHARED.GROUP.USER
+    player.sharedData.state       = SHARED.STATE.SELECT
+    player.sharedData.teamId      = SHARED.TEAMS.SPECTATORS
+    player.sharedData.lang        = this.config.get('LANGUAGE')
+    player.sharedData.spectate    = -1
   }
 
   /**
@@ -416,6 +400,11 @@ class PlayerManager extends EntityBase<PlayerMp> {
     return player.sharedData.group
   }
 
+  /**
+   * Get a player by id or name
+   * @param {string} idOrCode 
+   * @param {PlayerMp} notifiedPlayer - optional
+   */
   getPlayerByIdOrName(idOrCode: string, notifiedPlayer?: PlayerMp): PlayerMp {
     if (isNumber(idOrCode)) {
       return this.getPlayerById(+idOrCode, notifiedPlayer)

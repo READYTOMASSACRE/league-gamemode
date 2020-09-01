@@ -15,6 +15,7 @@ declare namespace TYPES {
     rollbackVector?: SHARED.TYPES.Vector2
     rollbackPosition?: Vector3Mp
     isSelecting: boolean
+    isSpectating: boolean
     assist: { [key: number]: number }
   }
 

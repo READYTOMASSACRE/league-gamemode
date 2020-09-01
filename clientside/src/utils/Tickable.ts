@@ -2,10 +2,7 @@ import { ErrorHandler } from "../core/ErrorHandler"
 import { EventEmitter } from "events"
 
 abstract class Tickable extends EventEmitter {
-  protected readonly INTERVAL: number = 1000
-
   protected stopped: boolean = true
-  protected interval?: NodeJS.Timeout
 
   constructor(readonly errHandler: ErrorHandler) {
     super()
@@ -15,6 +12,7 @@ abstract class Tickable extends EventEmitter {
 
   /**
    * An update function which will call from the HudManager if it necessary
+   * Invoke all tickable functions will be written in HudManager
    */
   tick(...args: any[]): void {}
 

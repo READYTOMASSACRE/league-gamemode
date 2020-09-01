@@ -20,9 +20,9 @@ class DialogManager {
    * @param {SHARED.RPC_DIALOG} RPC_OPEN_DIALOG 
    * @param {any[]} args - params which whill be passed in to the dialog
    */
-  call(RPC_OPEN_DIALOG: SHARED.RPC_DIALOG, ...args: any[]) {
+  call(RPC_OPEN_DIALOG: SHARED.RPC_DIALOG, ...args: any[]): Promise<any> | undefined {
     try {
-      this.browserManager.callBrowser(ENUMS.CEF.MAIN, RPC_OPEN_DIALOG, ...args)
+      return this.browserManager.callBrowser(ENUMS.CEF.MAIN, RPC_OPEN_DIALOG, ...args)
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }

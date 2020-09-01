@@ -18,6 +18,9 @@ import { RoundStart } from "../hud/effects/RoundStart"
 import { Hud } from "../hud/Hud"
 import { RoundStop } from "../hud/effects/RoundStop"
 import { Death } from "../hud/effects/Death"
+import { SpectateCurrent } from "../hud/SpectateCurrent"
+import { SpectateViewers } from "../hud/SpectateViewers"
+import { DummyPlayerStatManager } from "./dummies/DummyPlayerStatManager"
 
 /**
  * Class to manage the hud elements
@@ -37,29 +40,34 @@ class HudManager {
   readonly roundStartEffect : RoundStart
   readonly roundStopEffect  : RoundStop
   readonly deathEffect      : Death
+  readonly spectateCurrent  : SpectateCurrent
+  readonly spectateViewers  : SpectateViewers
 
   private nametag           : Nametag
   private tickableHuds      : Hud[]
   private interval?         : NodeJS.Timeout
 
   constructor(
-    readonly dummyConfig    : DummyConfigManager,
-    readonly lang           : DummyLanguageManager,
-    readonly errHandler     : ErrorHandler,
-    readonly dialogManager  : DialogManager,
-    readonly browserManager : BrowserManager,
-    readonly playerManager  : PlayerManager,
+    readonly dummyConfig          : DummyConfigManager,
+    readonly lang                 : DummyLanguageManager,
+    readonly playerStatManager    : DummyPlayerStatManager,
+    readonly errHandler           : ErrorHandler,
+    readonly dialogManager        : DialogManager,
+    readonly browserManager       : BrowserManager,
+    readonly playerManager        : PlayerManager,
   ) {
     this.nametag              = new Nametag(this.dummyConfig, this.lang, this.errHandler)
     this.roundInfo            = new RoundInfo(this.dummyConfig, this.lang, this.errHandler, this.dialogManager, this.browserManager, this.playerManager)
     this.votemapNotify        = new VotemapNotify(this.dummyConfig, this.lang, this.errHandler)
     this.teamSelecting        = new TeamSelecting(this.dummyConfig, this.lang, this.errHandler)
     this.gamemode             = new Gamemode(this.dummyConfig, this.lang, this.errHandler)
-    this.controls             = new Controls(this.dummyConfig, this.lang, this.errHandler)
+    this.controls             = new Controls(this.dummyConfig, this.lang, this.errHandler, this.dialogManager)
     this.damage               = new Damage(this.dummyConfig, this.lang, this.errHandler)
     this.roundStartEffect     = new RoundStart(this.dummyConfig, this.lang, this.errHandler)
     this.roundStopEffect      = new RoundStop(this.dummyConfig, this.lang, this.errHandler, this.dialogManager)
     this.deathEffect          = new Death(this.dummyConfig, this.lang, this.errHandler, this.dialogManager)
+    this.spectateCurrent      = new SpectateCurrent(this.dummyConfig, this.lang, this.errHandler, this.dialogManager, this.playerStatManager)
+    this.spectateViewers      = new SpectateViewers(this.dummyConfig, this.lang, this.errHandler, this.dialogManager, this.playerManager)
 
     this.hudInit              = this.hudInit.bind(this)
     this.hudRemove            = this.hudRemove.bind(this)
@@ -78,6 +86,7 @@ class HudManager {
       this.votemapNotify,
       this.damage,
       this.roundStartEffect,
+      this.spectateViewers
     ]
   }
 

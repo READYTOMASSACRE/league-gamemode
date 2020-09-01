@@ -36,6 +36,13 @@ class Round {
   }
 
   /**
+   * Get started params for sending data to client
+   */
+  getStartedParams(): any[] {
+    return [this.mapId, this.getPlayerIds(), this.getTimeleftMs()]
+  }
+
+  /**
    * Event of starting round
    */
   @logMethod(DEBUG)
@@ -46,7 +53,8 @@ class Round {
     }
 
     this.players.forEach(player => this.prepare(player))
-    
+    mp.players.call(this.players, SHARED.EVENTS.SERVER_ROUND_PREPARE, [this.mapId])
+
     this.prepareTimer = setTimeout(() => {
       this.roundTimer       = setTimeout(this.end, this.roundTimeInterval)
       this.roundStartDate   = Date.now()
@@ -57,13 +65,6 @@ class Round {
     }, this.prepareTime)
 
     this.started = true
-  }
-
-  /**
-   * Get started params for sending data to client
-   */
-  getStartedParams(): any[] {
-    return [this.mapId, this.getPlayerIds(), this.getTimeleftMs()]
   }
 
   /**
@@ -80,10 +81,42 @@ class Round {
 
     this.players.forEach(player => this.prepareEnd(player))
 
-    mp.events.call(SHARED.EVENTS.SERVER_ROUND_END, teamWinner)
+    mp.events.call(SHARED.EVENTS.SERVER_ROUND_END, teamWinner, this.players)
     mp.players.call(SHARED.EVENTS.SERVER_ROUND_END, [teamWinner])
 
     this.started = false
+  }
+
+  /**
+   * Prepare the player to start a new round
+   * @param {PlayerMp} player 
+   */
+  prepare(player: PlayerMp): boolean {
+    const teamId = this.playerManager.getTeam(player)
+    const vector = this.dummyMapManager.getRandomSpawnVector(this.mapId, teamId)
+
+    player.dimension = this.dimension.round
+
+    this.playerManager.setState(player, SHARED.STATE.ALIVE)
+    this.playerManager.spawn(player, vector)
+
+    /** @todo remove it */
+    player.health = 99
+
+    return true
+  }
+
+  /**
+   * Prepare the player to end a round
+   * @param {PlayerMp} player 
+   */
+  prepareEnd(player: PlayerMp, state: SHARED.STATE = SHARED.STATE.IDLE): boolean {
+    player.dimension = this.dimension.lobby
+    this.playerManager.setState(player, state)
+
+    if (state === SHARED.STATE.IDLE) this.playerManager.spawnInLobby(player)
+
+    return true
   }
 
   /**
@@ -121,41 +154,14 @@ class Round {
   }
 
   /**
-   * Prepare the player to start a new round
+   * Prepare a player to end the round because of death
    * @param {PlayerMp} player 
    */
-  prepare(player: PlayerMp, hasAdded: boolean = false): boolean {
-    const teamId = this.playerManager.getTeam(player)
-    const vector = this.dummyMapManager.getRandomSpawnVector(this.mapId, teamId)
+  prepareDeath(player: PlayerMp): boolean {
+    const prepared = this.prepareEnd(player, SHARED.STATE.DEAD)
+    if (prepared) player.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_DEATH, [])
 
-    player.dimension = this.dimension.round
-
-    this.playerManager.setState(player, SHARED.STATE.ALIVE)
-    this.playerManager.spawn(player, vector)
-
-    player.call(SHARED.EVENTS.SERVER_ROUND_PREPARE, [this.mapId, hasAdded])
-
-    if (!hasAdded) this.playerManager.success(player, SHARED.MSG.ROUND_START_MESSAGE, this.mapId.toString())
-
-    return true
-  }
-
-  /**
-   * Prepare the player to end a round
-   * @param {PlayerMp} player 
-   */
-  prepareEnd(player: PlayerMp, hasRemoved: boolean = false): boolean {
-    player.dimension = this.dimension.lobby
-    player.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_REMOVE, [])
-
-    this.playerManager.setState(player, SHARED.STATE.IDLE)
-    this.playerManager.spawn(player, this.lobby)
-    
-    if (!hasRemoved) {
-      this.playerManager.success(player, SHARED.MSG.ROUND_STOP_MESSAGE)
-    }
-
-    return true
+    return prepared
   }
 
   /**
@@ -163,16 +169,18 @@ class Round {
    * @param {PlayerMp} player 
    */
   addToRound(player: PlayerMp): boolean {
-    if (this.players.find(pl => pl.id === player.id && pl.type === player.type)) return false
+    if (this.hasPlayer(player)) return false
+    
+    if (this.prepare(player)) {
+      this.players = [...this.players, player]
 
-    const hasAdded = true
-    this.players = [...this.players, player]
-    this.prepare(player, hasAdded)
-
-    mp.players.call(this.players, SHARED.EVENTS.SERVER_ROUND_START, this.getStartedParams())
-    mp.events.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_ADD, player)
-
-    return true
+      player.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_ADD, this.getStartedParams())
+      mp.events.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_ADD, player)
+  
+      return true
+    } else {
+      return false
+    }
   }
 
   /**
@@ -186,11 +194,13 @@ class Round {
 
     if (players.length === this.players.length) return false
 
-    const hasRemoved = true
-    this.players = players
-    this.prepareEnd(player, hasRemoved)
+    const prepared = this.prepareEnd(player)
+    if (prepared) {
+      this.players = players
+      player.call(SHARED.EVENTS.SERVER_ROUND_PLAYER_REMOVE, [])
+    }
 
-    return true  
+    return prepared
   }
 
   /**
@@ -198,7 +208,10 @@ class Round {
    * @param {PlayerMp} player 
    */
   hasPlayer(player: PlayerMp): boolean {
-    return this.players.some(ppl => ppl.id === player.id)
+    return this.players.some(ppl => {
+      return ppl.id === player.id
+        && this.playerManager.hasState(player, SHARED.STATE.ALIVE)
+    })
   }
 
   /**
@@ -209,7 +222,7 @@ class Round {
    */
   @logMethod(DEBUG)
   playerDeath(player: PlayerMp, reason: number, killer?: PlayerMp): void {
-    this.removeFromRound(player)
+    this.prepareDeath(player)
   }
 
   /**
@@ -228,7 +241,12 @@ class Round {
    * @param {SHARED.TEAMS} teamId - (optional) team id in the round
    */
   hasAlivePlayers(teamId?: SHARED.TEAMS): boolean {
-    if (!teamId) return !!this.players.length
+    if (!teamId) {
+      return !!this
+        .players
+        .filter(ppl => this.playerManager.getState(ppl) === SHARED.STATE.ALIVE)
+        .length
+    }
 
     return !!this.getAlivePlayers(teamId)
   }
@@ -239,7 +257,10 @@ class Round {
    */
   getAlivePlayers(teamId: SHARED.TEAMS): number {
     return this.players
-      .filter(player => this.playerManager.getTeam(player) === teamId)
+      .filter(player => (
+        this.playerManager.getTeam(player) === teamId
+        && this.playerManager.getState(player) === SHARED.STATE.ALIVE
+      ))
       .length
   }
 

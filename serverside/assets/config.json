@@ -30,13 +30,14 @@
     "GROUP": {
       "HANDGUNS": 13,
       "SUBMACHINE": 9,
-      "SHOTGUNS": 37,
+      "SHOTGUNS": 5,
       "RIFLES": 10,
       "LIGHT_RIFLES": 10,
       "SNIPER_RIFLES": 41
     },
     "SPECIFIC": {
-      "weapon_revolver_mk2": 46
+      "weapon_revolver_mk2": 46,
+      "weapon_musket": 37
     }
   },
   "TEAMS": {

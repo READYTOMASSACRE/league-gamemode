@@ -46,6 +46,7 @@ class PlayerProfileManager {
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
       player.call(SHARED.EVENTS.SERVER_PLAYER_LOGIN_FAILURE, [])
+      mp.events.call(SHARED.EVENTS.SERVER_PLAYER_LOGIN_FAILURE, player)
     }
   }
 
@@ -55,14 +56,17 @@ class PlayerProfileManager {
    * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false} teamWinner
    */
   @logMethod(DEBUG)
-  saveStats(stats: SHARED.TYPES.PlayerRoundStatDTO[], teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): Promise<any> {
+  saveStats(stats: SHARED.TYPES.PlayerRoundStatDTO[], teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false, playersInRound: PlayerMp[]): Promise<any> {
     const promises: any = []
 
     stats.forEach(stat => {
       const player = mp.players.at(stat.id)
 
       if (mp.players.exists(player) && player.sharedData.profile) {
-        this.updateRoundStats(player, stat, teamWinner)
+        const teamId = player.sharedData.teamId
+        const teammates = playersInRound.filter(ppl => ppl.sharedData.teamId === teamId)
+
+        this.updateRoundStats(player, stat, teamWinner, teammates.length)
         promises.push(this.save(player))
       }
     })
@@ -76,17 +80,17 @@ class PlayerProfileManager {
    * @param {SHARED.TYPES.PlayerRoundStatDTO} dto - round data
    * @param {SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false} dto - round data
    */
-  updateRoundStats(player: PlayerMp, dto: SHARED.TYPES.PlayerRoundStatDTO, teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false): boolean {
+  updateRoundStats(player: PlayerMp, dto: SHARED.TYPES.PlayerRoundStatDTO, teamWinner: SHARED.TEAMS.ATTACKERS | SHARED.TEAMS.DEFENDERS | false, teammatesCount: number): boolean {
     const teamId  = player.sharedData.teamId
     const profile = this.getDomain(player)
     profile.updateRoundData(dto)
 
     if (teamWinner === teamId) {
-      profile.setWin()
+      profile.setWin(teammatesCount)
     } else if (teamWinner === false) {
       profile.setDraw()
     } else {
-      profile.setLose()
+      profile.setLose(teammatesCount)
     }
 
     return this.updateSharedProfile(player, profile)

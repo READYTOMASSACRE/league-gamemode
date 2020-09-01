@@ -54,6 +54,8 @@ class RoundManager {
     this.unpauseCmd           = this.unpauseCmd.bind(this)
     this.addToRoundCmd        = this.addToRoundCmd.bind(this)
     this.removeFromRoundCmd   = this.removeFromRoundCmd.bind(this)
+    this.playerLogin          = this.playerLogin.bind(this)
+    this.mapEditorCmd         = this.mapEditorCmd.bind(this)
   }
 
   /**
@@ -72,6 +74,7 @@ class RoundManager {
           if (killer) this.roundStatManager.addKill(killer)
           this.roundStatManager.addDeath(player)
         }
+        this.playerManager.playerDeathNotify(player, reason, killer)
         this.round.playerDeath(player, reason)
         this.triggerRoundEndByPlayer(player, this.round)
       }
@@ -91,12 +94,17 @@ class RoundManager {
   @event(SHARED.EVENTS.CLIENT_PLAYER_DEATH)
   clientPlayerDeath(player: PlayerMp, deathParams: string) {
     try {
-      const { killerId }    = JSON.parse(deathParams)
-      const playerAt        = mp.players.at(killerId)
-      const killer          = mp.players.exists(playerAt) ? playerAt : undefined
+      if (this.round && this.isRoundRunning) {
+        if (this.playerManager.getState(player) === SHARED.STATE.ALIVE) {
+          const { killerId, reason }  = JSON.parse(deathParams)
+          const playerAt              = mp.players.at(killerId)
+          const killer                = mp.players.exists(playerAt) ? playerAt : undefined
 
-      if (killer && mp.players.exists(killer)) {
-        this.roundStatManager.addKill(killer)
+          if (killer && mp.players.exists(killer)) {
+            this.roundStatManager.addKill(killer)
+            this.playerManager.playerDeathNotify(player, reason, killer)
+          }
+        }
       }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
@@ -119,6 +127,59 @@ class RoundManager {
         this.round.playerQuit(player, exitType, reason)
         this.triggerRoundEndByPlayer(player, this.round)
       }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires from the serverside when a player has logged
+   * @param {PlayerMp} player 
+   */
+  @event([SHARED.EVENTS.SERVER_PLAYER_LOGIN_SUCCESS, SHARED.EVENTS.SERVER_PLAYER_LOGIN_FAILURE])
+  playerLogin(player: PlayerMp): void {
+    try {
+      if (this.isRoundRunning && this.round) {
+        player.call(SHARED.EVENTS.SERVER_ROUND_PlAYER_JOIN, this.round.getStartedParams())
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+
+  /**
+   * Command
+   * 
+   * Toggling map editor
+   * 
+   * @param {PlayerMp} player 
+   * @param {string} cmdDesc 
+   * @param {boolean} toggle 
+   */
+  @command(['me', 'mapeditor'], { desc: cmdName })
+  mapEditorCmd(player: PlayerMp, cmdDesc: string, toggle?: string): void {
+    try {
+      if (!this.groupManager.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      if (this.isRoundRunning) {
+        throw new InvalidAccessNotify(SHARED.MSG.ERR_ROUND_IS_RUNNING, player)
+      }
+
+      if (typeof toggle === 'undefined') {
+        const lang = this.playerManager.getLang(player)
+        const cmdDescText = this.lang
+          .get(lang, SHARED.MSG.CMD_MAP_EDITOR)
+          .replace(cmdName, cmdDesc)
+
+        return this.playerManager.notify(player, cmdDescText)
+      }
+
+      player.call(SHARED.EVENTS.SERVER_MAP_EDITOR_TOGGLE, [toggle === 'on'])
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }

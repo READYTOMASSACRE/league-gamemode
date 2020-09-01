@@ -1,10 +1,12 @@
-import { Vector2 } from "../utils"
+import { Vector2, isNumber, escapeRegExp, keyBind } from "../utils"
 import { DialogManager } from "./DialogManager"
 import { BrowserManager } from "./BrowserManager"
 import { singleton, autoInjectable } from "tsyringe"
 import { command, commandable, eventable, event } from "rage-decorators"
 import { DummyLanguageManager } from "./dummies/DummyLanguageManager"
 import { ErrorHandler } from "../core/ErrorHandler"
+import { NotFoundNotifyError } from "../errors/PlayerErrors"
+import { callServer } from "rage-rpc"
 
 export const SHARED_DATA = "sharedData"
 const SETTER_NOT_ALLOWED = false
@@ -16,7 +18,7 @@ const SETTER_NOT_ALLOWED = false
 @autoInjectable()
 @commandable()
 @eventable()
-class PlayerManager {
+class PlayerManager implements INTERFACES.Manager {
   private cursor: boolean = false
   public readonly player: PlayerMp = mp.players.local
   private isFreezed: boolean = false
@@ -32,6 +34,13 @@ class PlayerManager {
     this.initData             = this.initData.bind(this)
     this.playerJoin           = this.playerJoin.bind(this)
     this.changeLanguage       = this.changeLanguage.bind(this)
+  }
+
+  /**
+   * @inheritdoc
+   */
+  load(): void {
+    keyBind([ENUMS.KEYCODES.VK_F7], false, this.toggleCursor)
   }
 
   /**
@@ -125,6 +134,7 @@ class PlayerManager {
    */
   private initCustomData(): void {
     this.player.customData = {
+      isSpectating: false,
       isSelecting: false,
       assist: {},
     }
@@ -206,6 +216,14 @@ class PlayerManager {
   }
 
   /**
+   * Helper function to set player data, such as position, model and etc. but with response from the server
+   * @param {any} object
+   */
+  setPlayerDataPromise(object: any): Promise<any> {
+    return callServer(SHARED.RPC.CLIENT_SET_PLAYER_DATA, JSON.stringify(object))
+  }
+
+  /**
    * Set the player's state
    * @param {SHARED.STATE} state 
    */
@@ -230,6 +248,49 @@ class PlayerManager {
     state = Array.isArray(state) && state || [state]
 
     return state.indexOf(player && this.getState(player) || this.getState()) !== -1
+  }
+
+  /**
+   * Get current spectate id local or remote player
+   * 
+   * @param {PlayerMp} player - remote player
+   */
+  getSpectate(player?: PlayerMp): number | false {
+    const spectateId = (player || this.player).sharedData.spectate
+
+    return spectateId !== -1
+      ? spectateId
+      : false
+  }
+
+  /**
+   * Set spectate data
+   * @param {PlayerMp} player - spectating player
+   */
+  setSpectate(player?: PlayerMp): void {
+    this.player.sharedData.spectate = typeof player !== 'undefined'
+      ? player.remoteId
+      : -1
+  }
+
+  /**
+   * Clear spectate data
+   */
+  clearSpectate(): void {
+    this.player.sharedData.spectate = -1
+  }
+
+  /**
+   * Getting player's spectate players pool
+   * 
+   * @param {PlayerMp} player - (optional) remote player
+   */
+  getPlayerSpectates(player?: PlayerMp): PlayerMp[] {
+    const id = (player || this.player).remoteId
+
+    return mp.players
+      .toArray()
+      .filter(ppl => this.getSpectate(ppl) === id)
   }
 
   /**
@@ -303,6 +364,68 @@ class PlayerManager {
       }
       this.isFreezed = toggle
     }
+  }
+
+  /**
+   * Get a player by id or name
+   * @param {string} idOrCode 
+   */
+  getPlayerByIdOrName(idOrCode: string): PlayerMp {
+    if (isNumber(idOrCode)) {
+      return this.getPlayerById(+idOrCode)
+    } else {
+      return this.getPlayerByName(idOrCode)
+    }
+  }
+
+  /**
+   * Get a player by id with notify
+   * @param {number} playerId 
+   */
+  getPlayerById(playerId: number): PlayerMp {
+    const player = mp.players.at(playerId)
+
+    // check if player exists
+    if (!player || !mp.players.exists(player)) {
+      throw new NotFoundNotifyError(SHARED.MSG.ERR_PLAYER_NOT_FOUND, playerId.toString())
+    }
+
+    return player
+  }
+
+
+  /**
+   * Get a player by name with notify
+   * @param {number} playerId 
+   */
+  getPlayerByName(name: string): PlayerMp {
+    const regex = new RegExp(escapeRegExp(name), 'gi')
+    const players = mp.players
+      .toArray()
+      .filter(player => player.name.match(regex))
+
+    if (!players.length) {
+      throw new NotFoundNotifyError(SHARED.MSG.ERR_PLAYER_NOT_FOUND, name)
+    }
+
+    if (players.length > 1) {
+      const names = players.map(player => player.name)
+      throw new NotFoundNotifyError(SHARED.MSG.ERR_TOO_MANY_PLAYERS, names.join(', '))
+    }
+
+    const [ player ] = players
+
+    return player
+  }
+
+  /**
+   * Get a player's position from the serverside
+   * @param {PlayerMp} player 
+   */
+  async getPlayerPosition(player: PlayerMp): Promise<[Vector3Mp, number] | [false]> {
+    const [vector, dimension] = await callServer(SHARED.RPC.CLIENT_PLAYER_POSITION, player.remoteId)
+
+    return [vector, dimension]
   }
 
   /**

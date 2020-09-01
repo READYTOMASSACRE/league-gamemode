@@ -4,6 +4,7 @@ import { PlayerManager } from "./PlayerManager"
 import { ErrorHandler } from "../core/ErrorHandler"
 import { HudManager } from "./HudManager"
 import { WeaponManager } from "./WeaponManager"
+import { throttle } from "../utils"
 
 /**
  * Class to manage the round stats
@@ -13,6 +14,12 @@ import { WeaponManager } from "./WeaponManager"
 @autoInjectable()
 class RoundStatManager {
   private player = mp.players.local
+  private throttledIncomingUpdate?: Function
+  private throttledOutcomingUpdate?: Function
+
+  private summaryDamage       : number = 0
+  private summaryDamageOut    : number = 0
+  private summaryHits         : number = 0
 
   constructor(
     readonly playerManager    : PlayerManager,
@@ -20,10 +27,12 @@ class RoundStatManager {
     readonly hudManager       : HudManager,
     readonly weaponManager    : WeaponManager,
   ) {
-    this.outcomingDamage    = this.outcomingDamage.bind(this)
-    this.incomingDamage     = this.incomingDamage.bind(this)
-    this.playerDeath        = this.playerDeath.bind(this)
-    this.playerWeaponShot   = this.playerWeaponShot.bind(this)
+    this.outcomingDamage        = this.outcomingDamage.bind(this)
+    this.incomingDamage         = this.incomingDamage.bind(this)
+    this.playerDeath            = this.playerDeath.bind(this)
+    this.playerWeaponShot       = this.playerWeaponShot.bind(this)
+    this.updateOutcomingDamage  = this.updateOutcomingDamage.bind(this)
+    this.updateIncomingDamage   = this.updateIncomingDamage.bind(this)
   }
 
   /**
@@ -48,11 +57,36 @@ class RoundStatManager {
       ) {
         if (this.sameTeam(targetPlayer)) return true
 
-        const newDamage = this.weaponManager.calculateDamage(weapon) || damage
+        const newDamage = weapon && this.weaponManager.calculateDamage(weapon) || damage
   
-        this.addDamage(weapon, newDamage)
-        this.addShotsHit()
+        this.summaryDamageOut += newDamage
+        this.summaryHits += 1
+
+        if (typeof this.throttledOutcomingUpdate === 'undefined') {
+          this.throttledOutcomingUpdate = throttle(this.updateOutcomingDamage, 200)
+        }
+
+        this.throttledOutcomingUpdate(weapon)
       }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Throttle update outcoming damage
+   * @param {number} weapon 
+   */
+  updateOutcomingDamage(weapon: number): void {
+    try {
+      if (typeof weapon !== 'undefined') {
+        this.addDamage(weapon, this.summaryDamageOut)
+      }
+
+      this.addShotsHit(this.summaryHits)
+      
+      this.summaryDamageOut   = 0
+      this.summaryHits        = 0
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
     }
@@ -73,6 +107,10 @@ class RoundStatManager {
   @event(RageEnums.EventKey.INCOMING_DAMAGE)
   incomingDamage(sourceEntity: PlayerMp, targetEntity: PlayerMp, targetPlayer: PlayerMp, weapon: number, boneIndex: number, damage: number): boolean | void {
     try {
+      if (this.playerManager.hasState(SHARED.STATE.SPECTATE)) {
+        return true
+      }
+
       if (
         this.playerManager.hasState(SHARED.STATE.ALIVE)
         && sourceEntity.type === "player"
@@ -80,25 +118,48 @@ class RoundStatManager {
       ) {
         if (this.sameTeam(sourceEntity)) return true
 
-        const newDamage = this.weaponManager.calculateDamage(weapon) || damage
-        
-        this.addAssist(sourceEntity)
-        this.addDamageReceived(weapon, newDamage)
-        this.damageNotify(sourceEntity, newDamage, weapon)
+        const newDamage       = weapon && this.weaponManager.calculateDamage(weapon) || damage
+        const customDamage    = newDamage !== damage
 
-        if (newDamage !== damage) {
-          const health          = this.player.getHealth() - newDamage
-          this.player.health    = health
+        if (typeof this.throttledIncomingUpdate === 'undefined') {
+          this.throttledIncomingUpdate = throttle(this.updateIncomingDamage, 200)
+        }
 
-          mp.events.callRemote(SHARED.EVENTS.CLIENT_SET_PLAYER_DATA, JSON.stringify({ health }))
-          
-          if (health <= 0) {
-            const deathParams = { killerId: sourceEntity.remoteId, reason: weapon }
-            mp.events.callRemote(SHARED.EVENTS.CLIENT_PLAYER_DEATH, JSON.stringify(deathParams))
-            this.hudManager.deathEffect.start()
-          }
+        this.summaryDamage += newDamage
+        this.throttledIncomingUpdate(sourceEntity, weapon, customDamage)
 
-          return true
+        if (customDamage) return true
+      }
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Throttle update incoming damage
+   * @param {PlayerMp} sourceEntity 
+   * @param {number} weapon 
+   * @param {boolean} customDamage (optional) - flag is it custom damage, default false
+   */
+  updateIncomingDamage(sourceEntity: PlayerMp, weapon: number, customDamage: boolean = false): void {
+    try {
+      if (typeof sourceEntity === 'undefined') return
+  
+      this.addAssist(sourceEntity)
+      this.addDamageReceived(weapon, this.summaryDamage)
+      this.damageNotify(sourceEntity, this.summaryDamage, weapon)
+  
+      if (customDamage) {
+        const health          = this.player.getHealth() - this.summaryDamage
+        this.player.health    = health
+        this.summaryDamage    = 0
+    
+        mp.events.callRemote(SHARED.EVENTS.CLIENT_SET_PLAYER_DATA, JSON.stringify({ health }))
+    
+        if (health <= 0) {
+          const deathParams = { killerId: sourceEntity.remoteId, reason: weapon }
+          mp.events.callRemote(SHARED.EVENTS.CLIENT_PLAYER_DEATH, JSON.stringify(deathParams))
+          this.hudManager.deathEffect.start()
         }
       }
     } catch (err) {
@@ -183,8 +244,8 @@ class RoundStatManager {
   /**
    * Add a hit to the local player
    */
-  addShotsHit(): void {
-    mp.events.callRemote(SHARED.EVENTS.CLIENT_ROUND_STAT_UPDATE, "shotsHit", 1)
+  addShotsHit(hit: number = 1): void {
+    mp.events.callRemote(SHARED.EVENTS.CLIENT_ROUND_STAT_UPDATE, "shotsHit", hit)
   }
 
   /**

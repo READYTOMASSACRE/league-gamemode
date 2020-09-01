@@ -1,6 +1,6 @@
 import { Validator } from './Validator'
 
-type PlayerEditableData = Pick<PlayerMp, 'model' | 'position'>
+type PlayerEditableData = Pick<PlayerMp, 'model' | 'position' | 'dimension' | 'health'>
 
 /**
  * @inheritdoc
@@ -12,6 +12,7 @@ class PlayerDataValidator extends Validator<PlayerEditableData> {
   protected validators: KeyValueCollection = {
     model: "number",
     position: "vector",
+    dimension: "number",
     health: "number",
   }
 }

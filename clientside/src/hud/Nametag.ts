@@ -83,6 +83,10 @@ class Nametag extends Hud {
    */
   private drawNickname(player: PlayerMp, xy: Array2d): void {
     const color = this.getTeamColor(player) || this.textParams.color
+    const [scaleX, scaleY] = this.textParams.scale
+    const [x, y] = xy
+
+    mp.game.graphics.drawText("id: " + player.remoteId, [x, y-0.02], { ...this.textParams, color, scale: [scaleX - 0.2, scaleY - 0.2] })
     mp.game.graphics.drawText(player.name, xy, { ...this.textParams, color })
   }
 
@@ -123,6 +127,9 @@ class Nametag extends Hud {
    */
   private isVisible(player: PlayerMp) : boolean {
     if (!this.cam) return false
+
+    if (this.player.sharedData.state === SHARED.STATE.SPECTATE) return true
+
     const localPlayerGameCam = this.cam.getCoord()
     const playerHead = player.getBoneCoords(ENUMS.BONES.IK_Head, 0, 0, 0)
 

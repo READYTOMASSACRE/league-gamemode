@@ -27,11 +27,27 @@ export class Zone {
     return inPolygon
   }
 
-/**
+  /**
    * Check if vector out of zone
    * @param {SHARED.TYPES.Vector2} vector 
    */
   out(vector: SHARED.TYPES.Vector2) : boolean {
     return !!!this.in(vector)
+  }
+
+  /**
+   * Return a center vector of map
+   * @return {SHARED.TYPES.Vector2}
+   */
+  center(): Vector3Mp {
+    const x = this.map.area.map(vector => vector.x)
+    const y = this.map.area.map(vector => vector.y)
+
+    const centerX = (Math.min(...x) + Math.max(...x)) / 2
+    const centerY = (Math.min(...y) + Math.max(...y)) / 2
+
+    const { z } = this.map.spawnPoints.ATTACKERS[0]
+
+    return new mp.Vector3(centerX, centerY, z)
   }
 }

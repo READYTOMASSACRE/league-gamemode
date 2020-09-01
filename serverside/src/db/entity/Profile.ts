@@ -14,8 +14,10 @@ export type USER_GROUPS = Exclude<SHARED.GROUP, SHARED.GROUP.ROOT>
 
 @Entity()
 export class Profile {
-  static readonly MMR_GAIN = 25
-  static readonly EXP_GAIN = 50
+  static readonly MMR_GAIN        = 25
+  static readonly EXP_GAIN        = 50
+  static readonly MAX_EXP         = 1000
+  static readonly EXP_KILL_GAIN   = 10
 
   @ObjectIdColumn()
   id!: ObjectID
@@ -73,20 +75,27 @@ export class Profile {
   /**
    * Set win
    */
-  setWin(): void {
-    this.state.wins     += 1
-    this.state.exp      += Profile.EXP_GAIN * 2
-    this.state.mmr      += Profile.MMR_GAIN
+  setWin(teammatesCount: number): void {
+    this.state.wins += 1
+    
+    const IS_WIN = true
+    this.calculateMmr(IS_WIN, teammatesCount)
+
+    this.state.exp += Profile.EXP_GAIN
+    this.calculateExperience()
   }
 
   /**
    * Set lose
    */
-  setLose(): void {
-    this.state.losses   += 1
-    this.state.exp      += Profile.EXP_GAIN
-    this.state.mmr      -= Profile.MMR_GAIN
-    if (this.state.mmr < 0) this.state.mmr = 0
+  setLose(teammatesCount: number): void {
+    this.state.losses += 1
+
+    const IS_WIN = false
+    this.calculateMmr(IS_WIN, teammatesCount)
+
+    this.state.exp += Profile.EXP_GAIN - Math.floor(Profile.EXP_GAIN / 2)
+    this.calculateExperience()
   }
 
   /**
@@ -94,7 +103,42 @@ export class Profile {
    */
   setDraw(): void {
     this.state.draws    += 1
-    this.state.exp      += Profile.EXP_GAIN
+
+    this.state.exp += Profile.EXP_GAIN - Math.floor(Profile.EXP_GAIN / 2)
+    this.calculateExperience()
+  }
+
+  /**
+   * Calculating current experience
+   */
+  calculateExperience(): void {
+    while (this.state.exp > Profile.MAX_EXP) {
+      this.state.exp -= Profile.MAX_EXP
+      this.lvlup()
+    }
+  }
+
+  /**
+   * Calculating current mmr points
+   */
+  calculateMmr(isWin: boolean, playersInTeam: number): void {
+    const mmrGain = playersInTeam > 5
+      ? Profile.MMR_GAIN
+      : Math.floor(Profile.MMR_GAIN / 2)
+    if (isWin === true) {
+      this.state.mmr += mmrGain
+    } else {
+      this.state.mmr -= mmrGain
+    }
+
+    if (this.state.mmr < 0) this.state.mmr = 0
+  }
+
+  /**
+   * Player's lvl up
+   */
+  lvlup(): void {
+    this.state.lvl += 1
   }
 
   /**
@@ -165,6 +209,14 @@ export class Profile {
     ) {
       this.state.timePlayed += this.calculatePlayingTime(player)
     }
+  }
+
+  /**
+   * Adding a kill experience
+   */
+  addKillExperience(): void {
+    this.state.exp += Profile.EXP_KILL_GAIN
+    this.calculateExperience()
   }
 
   /**

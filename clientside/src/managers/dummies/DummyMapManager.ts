@@ -1,8 +1,10 @@
-import { singleton, injectable } from "tsyringe";
-import { Dummy } from "../../entities/Dummy";
-import { Vector2, print } from "../../utils";
-import { NotFoundNotifyError } from "../../errors/PlayerErrors";
-import { DummyLanguageManager } from "./DummyLanguageManager";
+import { singleton, autoInjectable } from "tsyringe"
+import { Dummy } from "../../entities/Dummy"
+import { Vector2 } from "../../utils"
+import { NotFoundNotifyError } from "../../errors/PlayerErrors"
+import { DummyLanguageManager } from "./DummyLanguageManager"
+import { event, eventable } from "rage-decorators"
+import { ErrorHandler } from "../../core/ErrorHandler"
 
 export type MapInfo = Pick<TYPES.GameMap, 'id' | 'code'>
 
@@ -10,13 +12,36 @@ export type MapInfo = Pick<TYPES.GameMap, 'id' | 'code'>
  * Class to manage maps through the dummies
  */
 @singleton()
-@injectable()
+@eventable()
+@autoInjectable()
 class DummyMapManager {
   private readonly type = SHARED.ENTITIES.MAP
-  private readonly dummies: Dummy<SHARED.ENTITIES.MAP>[] = []
+  private dummies: Dummy<SHARED.ENTITIES.MAP>[] = []
 
-  constructor(readonly lang: DummyLanguageManager) {
+  constructor(
+    readonly lang: DummyLanguageManager,
+    readonly errHandler: ErrorHandler,
+  ) {
     this.cefVoteRequest = this.cefVoteRequest.bind(this)
+    this.refreshDummies = this.refreshDummies.bind(this)
+  }
+
+  /**
+   * Event
+   * 
+   * Fires from the serverside to update dummies
+   * @param {SHARED.ENTITIES} type 
+   */
+  @event(SHARED.EVENTS.SERVER_REFRESH_DUMMY)
+  refreshDummies(type: SHARED.ENTITIES): void {
+    try {
+      if (type !== SHARED.ENTITIES.MAP) return
+  
+      this.dummies = []
+      this.registerDummies()
+    } catch (err) {
+      if (this.errHandler.handle(err)) throw err
+    }
   }
 
   /**

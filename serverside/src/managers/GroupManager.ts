@@ -7,6 +7,8 @@ import { ErrorHandler } from "../core/ErrorHandler"
 import { InvalidAccessNotify, InvalidArgumentNotify, InvalidLoginGroup } from "../errors/PlayerErrors"
 import { hash256 } from "../utils"
 import { PlayerProfileManager } from "./PlayerProfileManager"
+import { DummyMapManager } from "./dummies/DummyMapManager"
+import { MapEditorState } from "../entities/validators/MapEditorDataValidator"
 
 
 const GROUP_CMD = 'g'
@@ -26,6 +28,7 @@ class GroupManager {
     readonly playerProfileManager: PlayerProfileManager,
     readonly lang: DummyLanguageManager,
     readonly errHandler: ErrorHandler,
+    readonly mapManager: DummyMapManager,
   ) {
     this.rcon               = hash256(this.config.get('RCON'))
     this.rconCmd            = this.rconCmd.bind(this)
@@ -34,6 +37,7 @@ class GroupManager {
     this.addModeratorCmd    = this.addModeratorCmd.bind(this)
     this.addUserCmd         = this.addUserCmd.bind(this)
     this.playerLogin        = this.playerLogin.bind(this)
+    this.mapEditorAddMap    = this.mapEditorAddMap.bind(this)
   }
 
   /**
@@ -59,6 +63,38 @@ class GroupManager {
       }
     } catch (err) {
       if (!this.errHandler.handle(err)) throw err
+    }
+  }
+
+  /**
+   * Event
+   * 
+   * Fires from the clientside when a client wants add a new map
+   * @param {PlayerMp} player 
+   * @param {string} payload - json data of new map
+   */
+  @event(SHARED.EVENTS.CLIENT_MAP_EDITOR_ADD_MAP)
+  mapEditorAddMap(player: PlayerMp, payload?: string): void {
+    try {
+      if (typeof payload === 'undefined') return
+
+      if (!this.isAdminOrRoot(player)) {
+        throw new InvalidAccessNotify(SHARED.MSG.GROUP_ERR_WRONG_ACCESS, player)
+      }
+
+      const dto: MapEditorState = JSON.parse(payload)
+      const { mapName, path, spawn } = dto
+      const newMap = this.mapManager.addMap({mapName, path, spawn }, player)
+
+      if (newMap) {
+        this.mapManager.refreshDummies()
+        this.playerManager.notify(player, SHARED.MSG.MAP_EDITOR_ADD_SUCCESS, 'success', newMap.code, newMap.id.toString())
+      }
+
+      player.call(SHARED.EVENTS.SERVER_MAP_EDITOR_ADD_RESULT, [!!newMap])
+    } catch (err) {
+      if (!this.errHandler.handle(err)) throw err
+      player.call(SHARED.EVENTS.SERVER_MAP_EDITOR_ADD_RESULT, [false])
     }
   }
 

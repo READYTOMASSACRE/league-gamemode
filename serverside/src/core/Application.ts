@@ -15,7 +15,7 @@ import { green, blue, bold, red } from 'colors'
 class Application {
   static readonly RECOMMENDED_PLAYERS = 32
   static readonly GAMEMODE = 'League'
-  static readonly VERSION  = '0.4.0'
+  static readonly VERSION  = '0.5.0'
 
   managers: Map<any, INTERFACES.Manager> = new Map<any, INTERFACES.Manager>()
   repositories: Map<any, any> = new Map()
@@ -51,9 +51,6 @@ class Application {
    * Prepare the app starting
    */
   private prepare(): void {
-    if (mp.config.gamemode !== Application.GAMEMODE) {
-      mp.config.gamemode = Application.GAMEMODE
-    }
     const rcon = this.config.get("RCON")
     if (
       typeof rcon !== 'string'

@@ -11,6 +11,7 @@ class SharedDataValidator extends Validator<Partial<SHARED.TYPES.SharedData>> {
     lang: "string",
     state: "number",
     teamId: "string",
+    spectate: "number",
   }
 }
 

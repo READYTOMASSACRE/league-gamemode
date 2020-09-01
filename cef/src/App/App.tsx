@@ -7,6 +7,9 @@ import NotifyNotistack from '../Notify/NotifyNotistack';
 import GameMenu from '../GameMenu/GameMenu';
 import DeathlogList from '../Deathlog/DeathlogList';
 import Effects from '../Effects/Effects';
+import Spectate from '../Spectate/Spectate';
+import MainControls from '../Common/MainControls';
+import MapEditor from '../MapEditor/MapEditor';
 
 function App() {
   return (
@@ -19,6 +22,9 @@ function App() {
         <ScoreboardData />
         <NotifyNotistack />
         <GameMenu />
+        <Spectate />
+        <MainControls />
+        <MapEditor />
       </main>
     </div>
   );

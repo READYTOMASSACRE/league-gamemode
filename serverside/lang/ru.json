@@ -10,6 +10,7 @@
   "CMD_CHANGE_TEAM"                   : "Использование /{{cmdName}} [ид|ник] [att|def|spec] - Сменить команду игроку",
   "CMD_ROUND_START"                   : "Использование /{{cmdName}} [ид карты|code] - Запустить карту",
   "CMD_ROUND_END"                     : "Использование /{{cmdName}} - Отсановить раунд",
+  "CMD_MAP_EDITOR"                    : "Использование /{{cmdName}} [on|off] - Запустить/остановить редактор карт",
 
   "PAGE_SHOW_CMD"                     : "Страница: %s, показ команд в диапазоне [%s..%s], всего %s",
 
@@ -19,11 +20,14 @@
 
   "ERR_INVALID_KEY"                   : "Не валидный ключ %s",
   "ERR_INVALID_VALIDATOR"             : "Не валидный валидатор",
+  "ERR_INVALID_VALIDATE"              : "Ошибка при валидации данных",
   "ERR_INVALID_OPERATION"             : "Не валидная операция",
   "ERR_INVALID_ROUND_STATE_UPDATE"    : "Не валидная дата или игрок не в раунде",
   "ERR_INVALID_ROUND_STAT"            : "Ошибка при обновлении статистики раунда",
   "ERR_INVALID_PLAYER_STATE"          : "Не валидный статус игрока",
   "ERR_INVALID_PLAYING_TIME"          : "%s::Ошибка при обновление игрового времени",
+  "ERR_MAP_ALREADY_EXISTS"            : "Карта %s уже существует",
+  "ERR_INVALID_EMPTY_ARRAY"           : "Массив %s пустой",
 
   "ERR_NOT_FOUND"                     : "Не найдено",
   "ERR_MAP_NOT_FOUND"                 : "Карта с ид/названием %s не была найдена",
@@ -135,5 +139,22 @@
 
   "GAMEMENU_TOP"                      : "Топ 100",
   "GAMEMENU_CREDITS"                  : "История & Авторы",
-  "GAMEMENU_REFRESH_BTN"              : "Обновить"
+  "GAMEMENU_REFRESH_BTN"              : "Обновить",
+
+  "SPECTATE_CURRENT_TEXT"             : "Наблюдающие:",
+  "SPECTATE_CONTROL_LABEL"            : "Сменить игрока",
+  "SPECTATE_CONTROL_LEFT"             : "Влево",
+  "SPECTATE_CONTROL_RIGHT"            : "Вправо",
+
+  "MAP_EDITOR_HEADER"                 : "Редактор карт",
+  "MAP_EDITOR_NAME_LABEL"             : "Наименование карты",
+  "MAP_EDITOR_POINT_NAME"             : "Точка",
+  "MAP_EDITOR_COORD_LABEL"            : "Координаты карты",
+  "MAP_EDITOR_ADD_POINT"              : "Добавить точку",
+  "MAP_EDITOR_SPAWN_LABEL"            : "Спавн позиции",
+  "MAP_EDITOR_ADD_SPAWN"              : "Добавить спавн",
+  "MAP_EDITOR_START"                  : "Старт",
+  "MAP_EDITOR_RESET"                  : "Сбросить",
+  "MAP_EDITOR_SAVE"                   : "Сохранить",
+  "MAP_EDITOR_ADD_SUCCESS"            : "Карта была успешно добавлена, %s [%s]"
 }

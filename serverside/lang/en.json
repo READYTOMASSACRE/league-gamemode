@@ -10,6 +10,7 @@
   "CMD_CHANGE_TEAM"                   : "Usage /{{cmdName}} [id|nickname] [att|def|spec] - Change a team for the player",
   "CMD_ROUND_START"                   : "Usage /{{cmdName}} [map id|code] - Start a round by map id or code",
   "CMD_ROUND_END"                     : "Usage /{{cmdName}} - Stop a round",
+  "CMD_MAP_EDITOR"                    : "Usage /{{cmdName}} [on|off] - Start/stop map editor",
 
   "PAGE_SHOW_CMD"                     : "Page: %s, showing commands [%s..%s] of %s",
 
@@ -19,11 +20,14 @@
 
   "ERR_INVALID_KEY"                   : "Invalid key %s",
   "ERR_INVALID_VALIDATOR"             : "Invalid validator",
+  "ERR_INVALID_VALIDATE"              : "Invalid sent data",
   "ERR_INVALID_OPERATION"             : "Invalid operation",
   "ERR_INVALID_ROUND_STATE_UPDATE"    : "Invalid data or player is not in round",
   "ERR_INVALID_ROUND_STAT"            : "Invalid roundstat",
   "ERR_INVALID_PLAYER_STATE"          : "Invalid player state",
   "ERR_INVALID_PLAYING_TIME"          : "%s::Invalid playing time",
+  "ERR_MAP_ALREADY_EXISTS"            : "Map %s has already exists",
+  "ERR_INVALID_EMPTY_ARRAY"           : "Array of %s is empty",
 
   "ERR_NOT_FOUND"                     : "Not found",
   "ERR_MAP_NOT_FOUND"                 : "Map with id/code %s hasn't found",
@@ -53,6 +57,9 @@
   "TEAM_SELECTOR_CHANGE_TEAM"         : "Change team",
   "TEAM_SELECTOR_CHANGE_SKIN"         : "Change skin",
   "TEAM_SELECTOR_SUBMIT"              : "Submit",
+
+  "SPECTATING_ENABLE"                 : "You enabled spectating mode",
+  "SPECTATING_DISABLE"                : "You disabled spectating mode",
 
   "KILL"                              : "Kill",
   "DEATH"                             : "Death",
@@ -135,5 +142,22 @@
 
   "GAMEMENU_TOP"                      : "Top 100",
   "GAMEMENU_CREDITS"                  : "Changelog & Credits",
-  "GAMEMENU_REFRESH_BTN"              : "Refresh"
+  "GAMEMENU_REFRESH_BTN"              : "Refresh",
+
+  "SPECTATE_CURRENT_TEXT"             : "Current spectate:",
+  "SPECTATE_CONTROL_LABEL"            : "Change player",
+  "SPECTATE_CONTROL_LEFT"             : "Left",
+  "SPECTATE_CONTROL_RIGHT"            : "Right",
+
+  "MAP_EDITOR_HEADER"                 : "Map editor",
+  "MAP_EDITOR_NAME_LABEL"             : "Map name",
+  "MAP_EDITOR_POINT_NAME"             : "Point",
+  "MAP_EDITOR_COORD_LABEL"            : "Map position",
+  "MAP_EDITOR_ADD_POINT"              : "Add point",
+  "MAP_EDITOR_SPAWN_LABEL"            : "Spawn points",
+  "MAP_EDITOR_ADD_SPAWN"              : "Add spawn",
+  "MAP_EDITOR_START"                  : "Start",
+  "MAP_EDITOR_RESET"                  : "Reset",
+  "MAP_EDITOR_SAVE"                   : "Save",
+  "MAP_EDITOR_ADD_SUCCESS"            : "Map has been added successfuly %s [%s]"
 }

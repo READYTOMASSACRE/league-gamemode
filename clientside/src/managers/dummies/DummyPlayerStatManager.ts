@@ -1,6 +1,13 @@
 import { Dummy } from "../../entities/Dummy"
 import { singleton, injectable } from "tsyringe"
 import { DummyLanguageManager } from "./DummyLanguageManager"
+
+interface KDA {
+  kill: number
+  death: number
+  assist: number
+}
+
 /**
  * Class to manage player stats through the dummies
  */
@@ -25,6 +32,32 @@ class DummyPlayerStatManager {
         this.dummies.set(dummy.data.id, dummy)
       }
     })
+  }
+
+  /**
+   * Get player current statistic
+   * @param {PlayerMp} player 
+   */
+  getInfo(player: PlayerMp): Dummy<SHARED.ENTITIES.PLAYER_STAT> | undefined {
+    return this
+      .toArray()
+      .find(dummy => dummy.data.id === player.remoteId)
+  }
+
+  /**
+   * Get player's KDA
+   * @param {PlayerMp} player 
+   */
+  getPlayerKDA(player: PlayerMp): KDA | undefined {
+    const dummy = this.getInfo(player)
+
+    if (typeof dummy === 'undefined') return
+
+    return {
+      kill: dummy.data.kill,
+      death: dummy.data.death,
+      assist: dummy.data.assist,
+    }
   }
 
   /**

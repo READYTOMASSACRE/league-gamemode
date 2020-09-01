@@ -2,6 +2,7 @@ interface PlayerMp {
 	customData: TYPES.PlayerCustomData
 	sharedData: SHARED.TYPES.SharedData
 	vector2: SHARED.TYPES.Vector2
+	isTypingInTextChat: boolean
 }
 
 interface String {
